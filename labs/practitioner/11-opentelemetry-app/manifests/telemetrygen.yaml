@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: telemetrygen-traces
+  namespace: practitioner-otel
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: telemetrygen-traces
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: telemetrygen
+          image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.152.0
+          args:
+            - traces
+            - --otlp-endpoint=otel-lab-collector.practitioner-otel.svc.cluster.local:4317
+            - --otlp-insecure
+            - --service=practitioner-otel-telemetrygen
+            - --traces=100
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: telemetrygen-metrics
+  namespace: practitioner-otel
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: telemetrygen-metrics
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: telemetrygen
+          image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.152.0
+          args:
+            - metrics
+            - --otlp-endpoint=otel-lab-collector.practitioner-otel.svc.cluster.local:4317
+            - --otlp-insecure
+            - --service=practitioner-otel-telemetrygen
+            - --metrics=100
