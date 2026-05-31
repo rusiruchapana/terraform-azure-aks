@@ -5,8 +5,8 @@ A reusable AKS Terraform platform for learning and practicing real-world DevOps 
 This project is designed for:
 
 - Beginners learning AKS, Kubernetes, Terraform, and cloud DevOps
-- Practitioners building CI/CD and GitOps workflows
-- Professionals validating platform engineering, security, networking, monitoring, and release patterns
+- Practitioners building CI/CD, DevSecOps, secrets, monitoring, and telemetry workflows
+- Professionals practicing GitOps, release strategies, incident response, security hardening, stack-specific delivery, and final end-to-end platform projects
 
 ## Documentation
 
