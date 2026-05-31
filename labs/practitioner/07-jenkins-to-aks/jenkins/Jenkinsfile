@@ -1,0 +1,91 @@
+pipeline {
+  agent any
+
+  environment {
+    IMAGE_NAME = 'jenkins-demo'
+    APP_NAMESPACE = 'practitioner-jenkins'
+    APP_DEPLOYMENT = 'jenkins-demo'
+  }
+
+  stages {
+    stage('Validate') {
+      steps {
+        sh '''
+          test -f app/Dockerfile
+          test -f app/index.html
+          test -f k8s/namespace.yaml
+          test -f k8s/deployment.yaml
+          test -f k8s/service.yaml
+          grep -q "IMAGE_PLACEHOLDER" k8s/deployment.yaml
+        '''
+      }
+    }
+
+    stage('Build and Push') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'REGISTRY_LOGIN_SERVER', variable: 'REGISTRY_LOGIN_SERVER'),
+          string(credentialsId: 'REGISTRY_USERNAME', variable: 'REGISTRY_USERNAME'),
+          string(credentialsId: 'REGISTRY_PASSWORD', variable: 'REGISTRY_PASSWORD')
+        ]) {
+          sh '''
+            echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY_LOGIN_SERVER" \
+              --username "$REGISTRY_USERNAME" \
+              --password-stdin
+
+            docker build \
+              --platform linux/amd64 \
+              -t "$REGISTRY_LOGIN_SERVER/$IMAGE_NAME:$BUILD_NUMBER" \
+              app
+
+            docker push "$REGISTRY_LOGIN_SERVER/$IMAGE_NAME:$BUILD_NUMBER"
+          '''
+        }
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AZURE_CLIENT_ID', variable: 'AZURE_CLIENT_ID'),
+          string(credentialsId: 'AZURE_CLIENT_SECRET', variable: 'AZURE_CLIENT_SECRET'),
+          string(credentialsId: 'AZURE_TENANT_ID', variable: 'AZURE_TENANT_ID'),
+          string(credentialsId: 'AZURE_SUBSCRIPTION_ID', variable: 'AZURE_SUBSCRIPTION_ID'),
+          string(credentialsId: 'AZURE_RESOURCE_GROUP', variable: 'AZURE_RESOURCE_GROUP'),
+          string(credentialsId: 'AKS_CLUSTER_NAME', variable: 'AKS_CLUSTER_NAME'),
+          string(credentialsId: 'REGISTRY_LOGIN_SERVER', variable: 'REGISTRY_LOGIN_SERVER')
+        ]) {
+          sh '''
+            az login --service-principal \
+              -u "$AZURE_CLIENT_ID" \
+              -p "$AZURE_CLIENT_SECRET" \
+              --tenant "$AZURE_TENANT_ID"
+
+            az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+            az aks get-credentials \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --name "$AKS_CLUSTER_NAME" \
+              --overwrite-existing
+
+            IMAGE="$REGISTRY_LOGIN_SERVER/$IMAGE_NAME:$BUILD_NUMBER"
+
+            kubectl apply -f k8s/namespace.yaml
+            sed "s|IMAGE_PLACEHOLDER|$IMAGE|g" k8s/deployment.yaml | kubectl apply -f -
+            kubectl apply -f k8s/service.yaml
+          '''
+        }
+      }
+    }
+
+    stage('Verify') {
+      steps {
+        sh '''
+          kubectl rollout status deployment/$APP_DEPLOYMENT -n $APP_NAMESPACE --timeout=180s
+          kubectl get pods -n $APP_NAMESPACE
+          kubectl get svc -n $APP_NAMESPACE
+        '''
+      }
+    }
+  }
+}

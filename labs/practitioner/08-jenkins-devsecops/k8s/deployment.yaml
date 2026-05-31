@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-devsecops-demo
+  namespace: practitioner-jenkins-devsecops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-devsecops-demo
+  template:
+    metadata:
+      labels:
+        app: jenkins-devsecops-demo
+    spec:
+      containers:
+        - name: jenkins-devsecops-demo
+          image: IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 80
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-ci-demo
+  namespace: practitioner-gitlab-ci
+spec:
+  selector:
+    app: gitlab-ci-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

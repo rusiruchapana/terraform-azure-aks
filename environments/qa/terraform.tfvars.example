@@ -1,0 +1,62 @@
+resource_group_name = "rg-aks-qa-001"
+location            = "southeastasia"
+
+vnet_name                   = "vnet-aks-qa-001"
+vnet_address_space          = ["10.20.0.0/16"]
+aks_subnet_name             = "snet-aks-qa-001"
+aks_subnet_address_prefixes = ["10.20.1.0/24"]
+
+enable_nat_gateway                  = true
+nat_gateway_name                    = "ngw-aks-qa-001"
+nat_gateway_public_ip_name          = "pip-ngw-aks-qa-001"
+nat_gateway_idle_timeout_in_minutes = 4
+
+aks_identity_name = "id-aks-qa-001"
+
+aks_cluster_name            = "aks-qa-001"
+aks_dns_prefix              = "aks-qa-001"
+aks_kubernetes_version      = null
+aks_private_cluster_enabled = false
+
+aks_oidc_issuer_enabled       = true
+aks_workload_identity_enabled = true
+
+system_node_pool_name                    = "system"
+system_node_vm_size                      = "Standard_B2s_v2"
+system_node_min_count                    = 1
+system_node_max_count                    = 3
+system_node_os_disk_size_gb              = 64
+system_node_only_critical_addons_enabled = true
+system_node_temporary_name_for_rotation  = "syspooltmp"
+
+user_node_pool_name       = "user"
+user_node_vm_size         = "Standard_B2s_v2"
+user_node_min_count       = 1
+user_node_max_count       = 3
+user_node_os_disk_size_gb = 64
+
+user_node_labels = {
+  workload = "user"
+  pool     = "user"
+}
+
+enable_acr        = true
+acr_name          = "replacewithuniqueqaacr001"
+acr_sku           = "Basic"
+acr_admin_enabled = false
+
+enable_keyvault = true
+keyvault_name   = "replace-with-unique-qa-kv"
+
+keyvault_sku_name                      = "standard"
+keyvault_soft_delete_retention_days    = 7
+keyvault_purge_protection_enabled      = false
+keyvault_public_network_access_enabled = true
+
+enable_workload_identity_keyvault_access = false
+
+tags = {
+  environment = "qa"
+  project     = "aks-platform"
+  managed_by  = "terraform"
+}

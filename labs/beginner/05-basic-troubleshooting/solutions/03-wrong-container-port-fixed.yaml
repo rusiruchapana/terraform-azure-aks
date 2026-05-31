@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wrong-port-demo
+  namespace: beginner-troubleshooting
+  labels:
+    app: wrong-port-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wrong-port-demo
+  template:
+    metadata:
+      labels:
+        app: wrong-port-demo
+    spec:
+      nodeSelector:
+        workload: user
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wrong-port-demo
+  namespace: beginner-troubleshooting
+spec:
+  selector:
+    app: wrong-port-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

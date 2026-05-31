@@ -1,0 +1,74 @@
+pipeline {
+  agent any
+
+  environment {
+    IMAGE_NAME = 'jenkins-devsecops-demo'
+  }
+
+  stages {
+    stage('Validate') {
+      steps {
+        sh '''
+          test -f app/Dockerfile
+          test -f app/index.html
+          test -f k8s/namespace.yaml
+          test -f k8s/deployment.yaml
+          test -f k8s/service.yaml
+          grep -q "IMAGE_PLACEHOLDER" k8s/deployment.yaml
+          trivy --version
+        '''
+      }
+    }
+
+    stage('Scan Config') {
+      steps {
+        sh '''
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            app
+
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            k8s
+        '''
+      }
+    }
+
+    stage('Build Image') {
+      steps {
+        sh '''
+          docker build \
+            --platform linux/amd64 \
+            -t "$IMAGE_NAME:$BUILD_NUMBER" \
+            app
+
+          docker save "$IMAGE_NAME:$BUILD_NUMBER" -o image.tar
+        '''
+      }
+    }
+
+    stage('Scan Image') {
+      steps {
+        sh '''
+          trivy image \
+            --input image.tar \
+            --severity HIGH,CRITICAL \
+            --exit-code 0
+        '''
+      }
+    }
+
+    stage('Summary') {
+      steps {
+        sh '''
+          echo "Jenkins DevSecOps checks completed."
+          echo "This lab does not push images to ACR."
+          echo "This lab does not deploy to AKS."
+          echo "Image scanned locally: $IMAGE_NAME:$BUILD_NUMBER"
+        '''
+      }
+    }
+  }
+}

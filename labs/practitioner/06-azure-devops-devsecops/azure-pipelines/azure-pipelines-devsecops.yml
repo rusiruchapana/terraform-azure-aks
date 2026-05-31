@@ -1,0 +1,146 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  BACKEND_IMAGE_NAME: node-backend-devsecops
+  FRONTEND_IMAGE_NAME: node-frontend-devsecops
+
+stages:
+  - stage: Validate
+    displayName: Validate files
+    jobs:
+      - job: Validate
+        displayName: Validate required files
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              test -f backend/Dockerfile
+              test -f backend/package.json
+              test -f backend/server.js
+
+              test -f frontend/Dockerfile
+              test -f frontend/nginx.conf
+              test -f frontend/package.json
+              test -f frontend/src/App.js
+
+              test -f k8s/namespace.yaml
+              test -f k8s/backend-deployment.yaml
+              test -f k8s/backend-service.yaml
+              test -f k8s/frontend-deployment.yaml
+              test -f k8s/frontend-service.yaml
+              test -f k8s/mysql-deployment.yaml
+              test -f k8s/mysql-service.yaml
+
+              grep -q "IMAGE_PLACEHOLDER" k8s/backend-deployment.yaml
+              grep -q "IMAGE_PLACEHOLDER" k8s/frontend-deployment.yaml
+            displayName: Validate required files
+
+  - stage: ScanConfig
+    displayName: Scan Dockerfiles and Kubernetes YAML
+    dependsOn: Validate
+    jobs:
+      - job: ScanConfig
+        displayName: Trivy config scan
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              docker run --rm \
+                -v "$(System.DefaultWorkingDirectory):/workspace" \
+                aquasec/trivy:0.69.3 \
+                config \
+                --severity HIGH,CRITICAL \
+                --exit-code 0 \
+                /workspace
+            displayName: Run Trivy config scan
+
+  - stage: BuildImages
+    displayName: Build local images for scanning
+    dependsOn: ScanConfig
+    jobs:
+      - job: BuildImages
+        displayName: Build backend and frontend images
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              docker build \
+                -t "$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)" \
+                backend
+
+              docker build \
+                -t "$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)" \
+                frontend
+
+              docker save "$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)" -o backend-image.tar
+              docker save "$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)" -o frontend-image.tar
+            displayName: Build and save local images
+
+          - publish: backend-image.tar
+            artifact: backend-image
+            displayName: Publish backend image artifact
+
+          - publish: frontend-image.tar
+            artifact: frontend-image
+            displayName: Publish frontend image artifact
+
+  - stage: ScanImages
+    displayName: Scan container images
+    dependsOn: BuildImages
+    jobs:
+      - job: ScanImages
+        displayName: Trivy image scans
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - download: current
+            artifact: backend-image
+            displayName: Download backend image artifact
+
+          - download: current
+            artifact: frontend-image
+            displayName: Download frontend image artifact
+
+          - script: |
+              docker load -i "$(Pipeline.Workspace)/backend-image/backend-image.tar"
+              docker load -i "$(Pipeline.Workspace)/frontend-image/frontend-image.tar"
+
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                aquasec/trivy:0.69.3 \
+                image \
+                --severity HIGH,CRITICAL \
+                --ignore-unfixed \
+                --exit-code 0 \
+                "$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)"
+
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                aquasec/trivy:0.69.3 \
+                image \
+                --severity HIGH,CRITICAL \
+                --ignore-unfixed \
+                --exit-code 0 \
+                "$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)"
+            displayName: Scan backend and frontend images
+
+  - stage: Summary
+    displayName: DevSecOps summary
+    dependsOn: ScanImages
+    jobs:
+      - job: Summary
+        displayName: Show summary
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              echo "Azure DevOps DevSecOps checks completed."
+              echo ""
+              echo "This pipeline does not deploy to AKS."
+              echo "It runs in learning mode with Trivy exit-code 0."
+              echo ""
+              echo "To make scans strict, change Trivy exit-code from 0 to 1."
+            displayName: Show DevSecOps summary

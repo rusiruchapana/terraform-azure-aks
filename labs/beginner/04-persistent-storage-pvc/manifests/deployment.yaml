@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-storage
+  namespace: beginner-storage
+  labels:
+    app: nginx-storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-storage
+  template:
+    metadata:
+      labels:
+        app: nginx-storage
+    spec:
+      nodeSelector:
+        workload: user
+      initContainers:
+        - name: write-html
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              cat > /html/index.html <<'HTML'
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>AKS Persistent Storage Lab</title>
+              </head>
+              <body style="font-family: Arial, sans-serif; margin: 40px;">
+                <h1>Hello from AKS Persistent Storage Lab</h1>
+                <p>This page is served by NGINX.</p>
+                <p>The HTML file is stored on a Kubernetes PersistentVolumeClaim.</p>
+                <p>If the pod is recreated, this content should remain available.</p>
+              </body>
+              </html>
+              HTML
+          volumeMounts:
+            - name: nginx-html
+              mountPath: /html
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: nginx-html
+          persistentVolumeClaim:
+            claimName: nginx-html-pvc

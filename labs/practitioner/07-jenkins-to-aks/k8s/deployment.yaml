@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-demo
+  namespace: practitioner-jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-demo
+  template:
+    metadata:
+      labels:
+        app: jenkins-demo
+    spec:
+      containers:
+        - name: jenkins-demo
+          image: IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 80

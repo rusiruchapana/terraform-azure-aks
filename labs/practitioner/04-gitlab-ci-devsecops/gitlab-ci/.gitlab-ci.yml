@@ -1,0 +1,65 @@
+stages:
+  - validate
+  - scan_config
+  - build_image
+  - scan_image
+  - summary
+
+variables:
+  APP_PATH: "app"
+  K8S_PATH: "k8s"
+  IMAGE_NAME: "gitlab-ci-devsecops-demo"
+  DOCKER_TLS_CERTDIR: "/certs"
+
+validate:
+  stage: validate
+  image: alpine:3.21
+  script:
+    - test -f "$APP_PATH/Dockerfile"
+    - test -f "$APP_PATH/index.html"
+    - test -f "$K8S_PATH/namespace.yaml"
+    - test -f "$K8S_PATH/deployment.yaml"
+    - test -f "$K8S_PATH/service.yaml"
+    - grep -q "IMAGE_PLACEHOLDER" "$K8S_PATH/deployment.yaml"
+
+scan_config:
+  stage: scan_config
+  image:
+    name: aquasec/trivy:0.69.3
+    entrypoint: [""]
+  script:
+    - trivy config --severity HIGH,CRITICAL --exit-code 0 "$APP_PATH"
+    - trivy config --severity HIGH,CRITICAL --exit-code 0 "$K8S_PATH"
+
+build_image:
+  stage: build_image
+  image: docker:27
+  services:
+    - name: docker:27-dind
+  script:
+    - docker build -t "$IMAGE_NAME:$CI_COMMIT_SHA" "$APP_PATH"
+    - docker save "$IMAGE_NAME:$CI_COMMIT_SHA" -o image.tar
+  artifacts:
+    name: "gitlab-devsecops-image"
+    paths:
+      - image.tar
+    expire_in: 1 hour
+
+scan_image:
+  stage: scan_image
+  image:
+    name: aquasec/trivy:0.69.3
+    entrypoint: [""]
+  dependencies:
+    - build_image
+  script:
+    - trivy image --input image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0
+
+summary:
+  stage: summary
+  image: alpine:3.21
+  script:
+    - echo "GitLab DevSecOps checks completed."
+    - echo "This lab does not deploy to AKS."
+    - echo "Scans run in learning mode with exit-code 0."
+    - echo "To make scans strict, change Trivy exit-code from 0 to 1."

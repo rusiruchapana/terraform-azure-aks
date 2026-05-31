@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-actions-demo
+  namespace: practitioner-github-actions
+  labels:
+    app: github-actions-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-actions-demo
+  template:
+    metadata:
+      labels:
+        app: github-actions-demo
+    spec:
+      nodeSelector:
+        workload: user
+      containers:
+        - name: web
+          image: IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 80

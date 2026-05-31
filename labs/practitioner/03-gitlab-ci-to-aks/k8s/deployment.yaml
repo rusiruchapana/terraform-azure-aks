@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitlab-ci-demo
+  namespace: practitioner-gitlab-ci
+  labels:
+    app: gitlab-ci-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitlab-ci-demo
+  template:
+    metadata:
+      labels:
+        app: gitlab-ci-demo
+    spec:
+      nodeSelector:
+        workload: user
+      containers:
+        - name: web
+          image: IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 80

@@ -1,0 +1,131 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  BACKEND_IMAGE_NAME: node-backend
+  FRONTEND_IMAGE_NAME: node-frontend
+  APP_NAMESPACE: practitioner-azure-devops
+  BACKEND_DEPLOYMENT: node-backend
+  FRONTEND_DEPLOYMENT: node-frontend
+
+stages:
+  - stage: Validate
+    displayName: Validate files
+    jobs:
+      - job: Validate
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              test -f backend/Dockerfile
+              test -f backend/package.json
+              test -f backend/server.js
+              test -f frontend/Dockerfile
+              test -f frontend/nginx.conf
+              test -f frontend/package.json
+              test -f frontend/src/App.js
+              test -f k8s/namespace.yaml
+              test -f k8s/backend-deployment.yaml
+              test -f k8s/frontend-deployment.yaml
+              grep -q "IMAGE_PLACEHOLDER" k8s/backend-deployment.yaml
+              grep -q "IMAGE_PLACEHOLDER" k8s/frontend-deployment.yaml
+            displayName: Validate required files
+
+  - stage: BuildPush
+    displayName: Build and push images
+    dependsOn: Validate
+    jobs:
+      - job: BuildPush
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              echo "$(REGISTRY_PASSWORD)" | docker login "$(REGISTRY_LOGIN_SERVER)" \
+                --username "$(REGISTRY_USERNAME)" \
+                --password-stdin
+
+              docker build \
+                -t "$(REGISTRY_LOGIN_SERVER)/$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)" \
+                backend
+
+              docker push "$(REGISTRY_LOGIN_SERVER)/$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)"
+
+              docker build \
+                -t "$(REGISTRY_LOGIN_SERVER)/$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)" \
+                frontend
+
+              docker push "$(REGISTRY_LOGIN_SERVER)/$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)"
+            displayName: Build and push backend and frontend images
+
+  - stage: Deploy
+    displayName: Deploy to AKS
+    dependsOn: BuildPush
+    jobs:
+      - job: Deploy
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              az login --service-principal \
+                -u "$(AZURE_CLIENT_ID)" \
+                -p "$(AZURE_CLIENT_SECRET)" \
+                --tenant "$(AZURE_TENANT_ID)"
+
+              az account set --subscription "$(AZURE_SUBSCRIPTION_ID)"
+
+              az aks get-credentials \
+                --resource-group "$(AZURE_RESOURCE_GROUP)" \
+                --name "$(AKS_CLUSTER_NAME)" \
+                --overwrite-existing
+
+              az aks install-cli
+
+              BACKEND_IMAGE="$(REGISTRY_LOGIN_SERVER)/$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)"
+              FRONTEND_IMAGE="$(REGISTRY_LOGIN_SERVER)/$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)"
+
+              kubectl apply -f k8s/namespace.yaml
+              kubectl apply -f k8s/mysql-secret.yaml
+              kubectl apply -f k8s/mysql-init-configmap.yaml
+              kubectl apply -f k8s/mysql-pvc.yaml
+              kubectl apply -f k8s/mysql-deployment.yaml
+              kubectl apply -f k8s/mysql-service.yaml
+
+              sed "s|IMAGE_PLACEHOLDER|$BACKEND_IMAGE|g" k8s/backend-deployment.yaml | kubectl apply -f -
+              kubectl apply -f k8s/backend-service.yaml
+
+              sed "s|IMAGE_PLACEHOLDER|$FRONTEND_IMAGE|g" k8s/frontend-deployment.yaml | kubectl apply -f -
+              kubectl apply -f k8s/frontend-service.yaml
+            displayName: Deploy MySQL, backend, and frontend
+
+  - stage: Verify
+    displayName: Verify deployment
+    dependsOn: Deploy
+    jobs:
+      - job: Verify
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              az login --service-principal \
+                -u "$(AZURE_CLIENT_ID)" \
+                -p "$(AZURE_CLIENT_SECRET)" \
+                --tenant "$(AZURE_TENANT_ID)"
+
+              az account set --subscription "$(AZURE_SUBSCRIPTION_ID)"
+
+              az aks get-credentials \
+                --resource-group "$(AZURE_RESOURCE_GROUP)" \
+                --name "$(AKS_CLUSTER_NAME)" \
+                --overwrite-existing
+
+              az aks install-cli
+
+              kubectl rollout status deployment/mysql -n "$(APP_NAMESPACE)" --timeout=180s
+              kubectl rollout status deployment/$(BACKEND_DEPLOYMENT) -n "$(APP_NAMESPACE)" --timeout=180s
+              kubectl rollout status deployment/$(FRONTEND_DEPLOYMENT) -n "$(APP_NAMESPACE)" --timeout=180s
+
+              kubectl get pods -n "$(APP_NAMESPACE)"
+              kubectl get svc -n "$(APP_NAMESPACE)"
+            displayName: Verify AKS rollout

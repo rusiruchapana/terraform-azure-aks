@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imagepull-demo
+  namespace: beginner-troubleshooting
+  labels:
+    app: imagepull-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imagepull-demo
+  template:
+    metadata:
+      labels:
+        app: imagepull-demo
+    spec:
+      nodeSelector:
+        workload: user
+      containers:
+        - name: nginx
+          image: nginx:this-tag-does-not-exist
+          ports:
+            - containerPort: 80

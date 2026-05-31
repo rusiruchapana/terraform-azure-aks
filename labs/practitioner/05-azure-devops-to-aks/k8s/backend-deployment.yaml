@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-backend
+  namespace: practitioner-azure-devops
+  labels:
+    app: node-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-backend
+  template:
+    metadata:
+      labels:
+        app: node-backend
+    spec:
+      nodeSelector:
+        workload: user
+      containers:
+        - name: backend
+          image: IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "5000"
+            - name: DB_HOST
+              value: mysql
+            - name: DB_USER
+              value: root
+            - name: DB_NAME
+              value: devops_db
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 20
