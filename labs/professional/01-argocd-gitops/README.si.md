@@ -183,23 +183,10 @@ Application manifest එක app sync path එකෙන් exclude කරලා �
 
 ඒකෙන් Argo CD Application manifest එක demo app namespace එකට apply කරන්න try කරන එක prevent වෙනවා.
 
-## Commit and push this lab before creating the application
-
-Argo CD manifests කියවන්නේ GitHub එකෙන්.
-
-Argo CD Application එක apply කරන්න කලින් මෙම lab එක commit සහ push කරන්න:
-
-    git add labs/professional/01-argocd-gitops
-    git commit -m "Add Argo CD GitOps professional lab"
-    git push
-
-Working tree එක verify කරන්න:
-
-    git status
 
 ## Create the Argo CD Application
 
-Lab files GitHub එකට push කළාට පස්සේ Argo CD Application එක apply කරන්න:
+Argo CD Application එක apply කරන්න:
 
     kubectl apply -f labs/professional/01-argocd-gitops/manifests/argocd-application.yaml
 
@@ -255,35 +242,27 @@ Self-heal enabled නිසා Argo CD deployment එක Git desired state එ�
 
     kubectl get deployment gitops-nginx -n "$APP_NAMESPACE"
 
-## Test a GitOps change
+## Understand GitOps changes
 
-මෙම file එකේ replica count update කරන්න:
+Argo CD watch කරන්නේ මෙතන configure කරලා තියෙන Git source එක:
 
-    manifests/app.yaml
+    manifests/argocd-application.yaml
 
-මේක:
+මෙම lab එකේ source එක `repoURL` එකේ තියෙන published repository URL එක.
 
-    replicas: 2
+මෙම lab එකට learnersලා GitHub එකට කිසිම දෙයක් push කරන්න අවශ්‍ය නැහැ.
 
-මේකට change කරන්න:
+ඔයාගේ machine එකේ local file edits practice සඳහා useful. හැබැයි ඒ edits configured Git source එකෙන් available නැත්නම් Argo CD ඒවා දකින්නේ නැහැ.
 
-    replicas: 3
+මෙම lab එකේ reconciliation concept එක තේරුම් ගන්න ඉහත self-heal test එක use කරන්න:
 
-Commit සහ push කරන්න:
-
-    git add labs/professional/01-argocd-gitops/manifests/app.yaml
-    git commit -m "Update Argo CD demo replicas"
-    git push
-
-Argo CD Git change එක detect කරලා cluster එක sync කරන්න ඕන.
-
-Verify කරන්න:
-
-    kubectl get deployment gitops-nginx -n "$APP_NAMESPACE"
-
-Sync වුණාට පස්සේ replicas 3ක් පේන්න ඕන.
-
-Lab default එක keep කරන්න ඕන නම් replicas නැවත 2 කරලා commit සහ push කරන්න.
+    Manual cluster change
+      |
+      v
+    Argo CD detects drift
+      |
+      v
+    Argo CD restores the Git desired state
 
 ## Troubleshooting
 

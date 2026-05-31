@@ -183,23 +183,10 @@ The Application manifest excludes itself from the app sync path:
 
 This prevents Argo CD from trying to apply the Application manifest into the demo app namespace.
 
-## Commit and push this lab before creating the application
-
-Argo CD reads manifests from GitHub.
-
-Before applying the Argo CD Application, commit and push this lab:
-
-    git add labs/professional/01-argocd-gitops
-    git commit -m "Add Argo CD GitOps professional lab"
-    git push
-
-Verify the working tree:
-
-    git status
 
 ## Create the Argo CD Application
 
-After the lab files are pushed to GitHub, apply the Argo CD Application:
+Apply the Argo CD Application:
 
     kubectl apply -f labs/professional/01-argocd-gitops/manifests/argocd-application.yaml
 
@@ -255,35 +242,27 @@ Verify again:
 
     kubectl get deployment gitops-nginx -n "$APP_NAMESPACE"
 
-## Test a GitOps change
+## Understand GitOps changes
 
-Update the replica count in:
+Argo CD watch කරන්නේ මෙතන configure කරලා තියෙන Git source එක:
 
-    manifests/app.yaml
+    manifests/argocd-application.yaml
 
-Change:
+මෙම lab එකේ source එක `repoURL` එකේ තියෙන published repository URL එක.
 
-    replicas: 2
+මෙම lab එකට learnersලා GitHub එකට කිසිම දෙයක් push කරන්න අවශ්‍ය නැහැ.
 
-To:
+ඔයාගේ machine එකේ local file edits practice සඳහා useful. හැබැයි ඒ edits configured Git source එකෙන් available නැත්නම් Argo CD ඒවා දකින්නේ නැහැ.
 
-    replicas: 3
+මෙම lab එකේ reconciliation concept එක තේරුම් ගන්න ඉහත self-heal test එක use කරන්න:
 
-Commit and push:
-
-    git add labs/professional/01-argocd-gitops/manifests/app.yaml
-    git commit -m "Update Argo CD demo replicas"
-    git push
-
-Argo CD should detect the Git change and sync the cluster.
-
-Verify:
-
-    kubectl get deployment gitops-nginx -n "$APP_NAMESPACE"
-
-You should see 3 replicas after sync.
-
-If you want to keep the lab default, change replicas back to 2, commit, and push again.
+    Manual cluster change
+      |
+      v
+    Argo CD detects drift
+      |
+      v
+    Argo CD restores the Git desired state
 
 ## Troubleshooting
 
