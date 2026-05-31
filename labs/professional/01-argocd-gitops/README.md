@@ -33,23 +33,39 @@ You will learn:
 
 ## Architecture
 
-This lab uses two namespaces:
+This lab uses two repositories:
 
-    argocd
-      Argo CD control plane
+    terraform-azure-aks
+      Learning platform and lab guide repository
 
-    professional-gitops-demo
-      Demo application namespace
+    aks-gitops-sample-app
+      Sample application repository used by Argo CD
 
-The GitOps application source is:
+Argo CD runs inside the AKS cluster. It cannot read files directly from your laptop.
 
-    https://github.com/andrewferdinandus/terraform-azure-aks.git
+For this lab, Argo CD reads Kubernetes manifests from the sample app repository:
 
-The application path is:
+    https://github.com/andrewferdinandus/aks-gitops-sample-app.git
 
-    labs/professional/01-argocd-gitops/manifests
+Path:
 
-Argo CD reads this path and applies the Kubernetes manifests to the cluster.
+    k8s/overlays/dev
+
+The flow is:
+
+    aks-gitops-sample-app
+      |
+      v
+    Argo CD
+      |
+      v
+    AKS namespace: gitops-sample-dev
+      |
+      v
+    dev-gitops-sample-app
+
+Learners do not push anything to GitHub for this lab. Argo CD only reads the sample app manifests from the public sample repository.
+
 
 ## What this lab requires
 
@@ -91,9 +107,9 @@ Files:
 Set these values for your environment:
 
     ARGOCD_NAMESPACE="argocd"
-    APP_NAMESPACE="professional-gitops-demo"
-    REPO_URL="https://github.com/andrewferdinandus/terraform-azure-aks.git"
-    APP_PATH="labs/professional/01-argocd-gitops/manifests"
+    APP_NAMESPACE="gitops-sample-dev"
+    REPO_URL="https://github.com/andrewferdinandus/aks-gitops-sample-app.git"
+    APP_PATH="k8s/overlays/dev"
 
 ## Install Argo CD
 
@@ -171,17 +187,17 @@ The Argo CD Application is defined in:
 
     manifests/argocd-application.yaml
 
-It points to:
+It points to the separate sample application repository:
 
-    repoURL: https://github.com/andrewferdinandus/terraform-azure-aks.git
+    repoURL: https://github.com/andrewferdinandus/aks-gitops-sample-app.git
     targetRevision: main
-    path: labs/professional/01-argocd-gitops/manifests
+    path: k8s/overlays/dev
 
-The Application manifest excludes itself from the app sync path:
+The destination namespace is:
 
-    exclude: argocd-application.yaml
+    gitops-sample-dev
 
-This prevents Argo CD from trying to apply the Application manifest into the demo app namespace.
+This keeps the learning platform repository separate from the sample application repository.
 
 
 ## Create the Argo CD Application
@@ -194,14 +210,21 @@ Verify the Application resource:
 
     kubectl get applications -n "$ARGOCD_NAMESPACE"
 
-Check the demo namespace:
+Check the sample app namespace:
 
     kubectl get ns "$APP_NAMESPACE"
 
-Check the demo workload:
+Check the sample app workload:
 
     kubectl get pods -n "$APP_NAMESPACE"
     kubectl get svc -n "$APP_NAMESPACE"
+
+Expected result:
+
+    professional-gitops-demo   Synced   Healthy
+    dev-gitops-sample-app pods Running
+    dev-gitops-sample-app service created
+
 
 ## Verify in the Argo CD UI
 
@@ -228,7 +251,7 @@ If it is OutOfSync, click Sync or wait for automated sync.
 
 Scale the deployment manually:
 
-    kubectl scale deployment gitops-nginx -n "$APP_NAMESPACE" --replicas=1
+    kubectl scale deployment dev-gitops-sample-app -n "$APP_NAMESPACE" --replicas=1
 
 Check pods:
 
@@ -240,29 +263,32 @@ Because self-heal is enabled, Argo CD should reconcile the deployment back to th
 
 Verify again:
 
-    kubectl get deployment gitops-nginx -n "$APP_NAMESPACE"
+    kubectl get deployment dev-gitops-sample-app -n "$APP_NAMESPACE"
 
 ## Understand GitOps changes
 
-Argo CD watch කරන්නේ මෙතන configure කරලා තියෙන Git source එක:
+Argo CD watches the Git source configured in:
 
     manifests/argocd-application.yaml
 
-මෙම lab එකේ source එක `repoURL` එකේ තියෙන published repository URL එක.
+In this lab, that source is:
 
-මෙම lab එකට learnersලා GitHub එකට කිසිම දෙයක් push කරන්න අවශ්‍ය නැහැ.
+    https://github.com/andrewferdinandus/aks-gitops-sample-app.git
 
-ඔයාගේ machine එකේ local file edits practice සඳහා useful. හැබැයි ඒ edits configured Git source එකෙන් available නැත්නම් Argo CD ඒවා දකින්නේ නැහැ.
+Local file edits on your laptop are useful for practice, but Argo CD will not see those edits unless they are available from the configured Git source.
 
-මෙම lab එකේ reconciliation concept එක තේරුම් ගන්න ඉහත self-heal test එක use කරන්න:
+For this lab, use the self-heal test above to understand reconciliation without pushing any changes.
 
-    Manual cluster change
+The important concept is:
+
+    Git desired state
       |
       v
-    Argo CD detects drift
+    Argo CD reconciliation
       |
       v
-    Argo CD restores the Git desired state
+    Kubernetes cluster state
+
 
 ## Troubleshooting
 

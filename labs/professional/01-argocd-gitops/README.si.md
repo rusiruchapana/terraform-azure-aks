@@ -33,23 +33,39 @@ Flow එක:
 
 ## Architecture
 
-මෙම lab එක namespaces දෙකක් use කරනවා:
+මෙම lab එක repositories දෙකක් use කරනවා:
 
-    argocd
-      Argo CD control plane
+    terraform-azure-aks
+      Learning platform සහ lab guide repository එක
 
-    professional-gitops-demo
-      Demo application namespace
+    aks-gitops-sample-app
+      Argo CD use කරන sample application repository එක
 
-GitOps application source එක:
+Argo CD AKS cluster එක ඇතුළේ run වෙනවා. ඒ නිසා ඔයාගේ laptop එකේ files direct read කරන්න බැහැ.
 
-    https://github.com/andrewferdinandus/terraform-azure-aks.git
+මෙම lab එකේදී Argo CD Kubernetes manifests read කරන්නේ sample app repository එකෙන්:
 
-Application path එක:
+    https://github.com/andrewferdinandus/aks-gitops-sample-app.git
 
-    labs/professional/01-argocd-gitops/manifests
+Path එක:
 
-Argo CD මේ path එක read කරලා Kubernetes manifests cluster එකට apply කරනවා.
+    k8s/overlays/dev
+
+Flow එක:
+
+    aks-gitops-sample-app
+      |
+      v
+    Argo CD
+      |
+      v
+    AKS namespace: gitops-sample-dev
+      |
+      v
+    dev-gitops-sample-app
+
+මෙම lab එකට learnersලා GitHub එකට කිසිම දෙයක් push කරන්න අවශ්‍ය නැහැ. Argo CD public sample repository එකෙන් sample app manifests read කරනවා විතරයි.
+
 
 ## What this lab requires
 
@@ -91,9 +107,9 @@ Files:
 ඔයාගේ environment එකට values set කරන්න:
 
     ARGOCD_NAMESPACE="argocd"
-    APP_NAMESPACE="professional-gitops-demo"
-    REPO_URL="https://github.com/andrewferdinandus/terraform-azure-aks.git"
-    APP_PATH="labs/professional/01-argocd-gitops/manifests"
+    APP_NAMESPACE="gitops-sample-dev"
+    REPO_URL="https://github.com/andrewferdinandus/aks-gitops-sample-app.git"
+    APP_PATH="k8s/overlays/dev"
 
 ## Install Argo CD
 
@@ -171,17 +187,17 @@ Argo CD Application එක define කරලා තියෙන්නේ:
 
     manifests/argocd-application.yaml
 
-ඒක point කරන්නේ:
+ඒක වෙනම sample application repository එකට point කරනවා:
 
-    repoURL: https://github.com/andrewferdinandus/terraform-azure-aks.git
+    repoURL: https://github.com/andrewferdinandus/aks-gitops-sample-app.git
     targetRevision: main
-    path: labs/professional/01-argocd-gitops/manifests
+    path: k8s/overlays/dev
 
-Application manifest එක app sync path එකෙන් exclude කරලා තියෙනවා:
+Destination namespace එක:
 
-    exclude: argocd-application.yaml
+    gitops-sample-dev
 
-ඒකෙන් Argo CD Application manifest එක demo app namespace එකට apply කරන්න try කරන එක prevent වෙනවා.
+මේකෙන් learning platform repository එක සහ sample application repository එක වෙන වෙනම තියාගන්නවා.
 
 
 ## Create the Argo CD Application
@@ -194,14 +210,21 @@ Application resource එක verify කරන්න:
 
     kubectl get applications -n "$ARGOCD_NAMESPACE"
 
-Demo namespace එක check කරන්න:
+Sample app namespace එක check කරන්න:
 
     kubectl get ns "$APP_NAMESPACE"
 
-Demo workload එක check කරන්න:
+Sample app workload එක check කරන්න:
 
     kubectl get pods -n "$APP_NAMESPACE"
     kubectl get svc -n "$APP_NAMESPACE"
+
+Expected result:
+
+    professional-gitops-demo   Synced   Healthy
+    dev-gitops-sample-app pods Running
+    dev-gitops-sample-app service created
+
 
 ## Verify in the Argo CD UI
 
@@ -228,7 +251,7 @@ OutOfSync නම්, Sync click කරන්න හෝ automated sync වෙන�
 
 Deployment එක manually scale කරන්න:
 
-    kubectl scale deployment gitops-nginx -n "$APP_NAMESPACE" --replicas=1
+    kubectl scale deployment dev-gitops-sample-app -n "$APP_NAMESPACE" --replicas=1
 
 Pods check කරන්න:
 
@@ -240,7 +263,7 @@ Self-heal enabled නිසා Argo CD deployment එක Git desired state එ�
 
 නැවත verify කරන්න:
 
-    kubectl get deployment gitops-nginx -n "$APP_NAMESPACE"
+    kubectl get deployment dev-gitops-sample-app -n "$APP_NAMESPACE"
 
 ## Understand GitOps changes
 
@@ -248,21 +271,24 @@ Argo CD watch කරන්නේ මෙතන configure කරලා තිය�
 
     manifests/argocd-application.yaml
 
-මෙම lab එකේ source එක `repoURL` එකේ තියෙන published repository URL එක.
+මෙම lab එකේ source එක:
 
-මෙම lab එකට learnersලා GitHub එකට කිසිම දෙයක් push කරන්න අවශ්‍ය නැහැ.
+    https://github.com/andrewferdinandus/aks-gitops-sample-app.git
 
-ඔයාගේ machine එකේ local file edits practice සඳහා useful. හැබැයි ඒ edits configured Git source එකෙන් available නැත්නම් Argo CD ඒවා දකින්නේ නැහැ.
+ඔයාගේ laptop එකේ local file edits practice සඳහා useful. හැබැයි ඒ edits configured Git source එකෙන් available නැත්නම් Argo CD ඒවා දකින්නේ නැහැ.
 
-මෙම lab එකේ reconciliation concept එක තේරුම් ගන්න ඉහත self-heal test එක use කරන්න:
+මෙම lab එකේ reconciliation concept එක තේරුම් ගන්න කිසිම changes push නොකර ඉහත self-heal test එක use කරන්න.
 
-    Manual cluster change
+වැදගත් concept එක:
+
+    Git desired state
       |
       v
-    Argo CD detects drift
+    Argo CD reconciliation
       |
       v
-    Argo CD restores the Git desired state
+    Kubernetes cluster state
+
 
 ## Troubleshooting
 
