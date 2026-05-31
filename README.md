@@ -69,3 +69,17 @@ Current planned path:
 6. Professional stack-specific DevSecOps and quality gates
 7. Secure end-to-end final projects
 8. AI-assisted DevOps labs
+
+## License and usage
+
+This repository is publicly visible for educational, portfolio, and reference purposes.
+
+Copyright (c) 2026 Andrew Ferdinandus. All rights reserved.
+
+You may view this repository and fork it on GitHub for personal learning and reference.
+
+You may not copy, redistribute, re-upload, publish, sublicense, sell, or use this project or substantial parts of it in another repository, course, product, or commercial work without written permission from the author.
+
+Forks should preserve attribution to the original repository and author.
+
+For usage restrictions, see [NOTICE.md](NOTICE.md).
