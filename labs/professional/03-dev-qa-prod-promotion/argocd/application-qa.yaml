@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: promotion-demo-qa
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/andrewferdinandus/terraform-azure-aks.git
+    targetRevision: main
+    path: gitops/apps/qa/promotion-demo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: promotion-qa
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
