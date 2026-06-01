@@ -53,13 +53,13 @@ Flow එක:
 
 ## Architecture
 
-මෙම lab එක GitOps source එක ලෙස මෙම repository එක use කරනවා.
+මෙම lab එක GitOps source එක ලෙස sample application repository එක use කරනවා.
 
 Desired state තියෙන්නේ:
 
-    gitops/apps/dev/promotion-demo
-    gitops/apps/qa/promotion-demo
-    gitops/apps/prod/promotion-demo
+    k8s/promotion/dev
+    k8s/promotion/qa
+    k8s/promotion/prod
 
 Argo CD Application manifests තියෙන්නේ:
 
@@ -67,9 +67,9 @@ Argo CD Application manifests තියෙන්නේ:
 
 එක් එක් Argo CD Application එක environment path එකකට point කරනවා:
 
-    promotion-demo-dev  -> gitops/apps/dev/promotion-demo
-    promotion-demo-qa   -> gitops/apps/qa/promotion-demo
-    promotion-demo-prod -> gitops/apps/prod/promotion-demo
+    promotion-demo-dev  -> k8s/promotion/dev
+    promotion-demo-qa   -> k8s/promotion/qa
+    promotion-demo-prod -> k8s/promotion/prod
 
 එක් එක් environment එක deploy කරන්නේ:
 
@@ -138,9 +138,9 @@ Argo CD Application CRD verify කරන්න:
 
 මෙම lab එක use කරන files:
 
-    gitops/apps/dev/promotion-demo/
-    gitops/apps/qa/promotion-demo/
-    gitops/apps/prod/promotion-demo/
+    k8s/promotion/dev/
+    k8s/promotion/qa/
+    k8s/promotion/prod/
 
     labs/professional/03-dev-qa-prod-promotion/argocd/
 
@@ -164,7 +164,7 @@ Argo CD ට read කළ හැකි Git URL එක use කරන්න.
 
 Example:
 
-    REPO_URL="https://github.com/<your-user-or-org>/<your-repo>.git"
+    REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
 මෙම repository එක current remote එක නම්:
 
@@ -191,9 +191,9 @@ Namespaces set කරන්න:
 Starter version values check කරන්න:
 
     grep -RInE 'Environment:|Version:' \
-      gitops/apps/dev/promotion-demo/configmap.yaml \
-      gitops/apps/qa/promotion-demo/configmap.yaml \
-      gitops/apps/prod/promotion-demo/configmap.yaml
+      k8s/promotion/dev/configmap.yaml \
+      k8s/promotion/qa/configmap.yaml \
+      k8s/promotion/prod/configmap.yaml
 
 Expected starter state:
 
@@ -215,8 +215,8 @@ Status check කරන්න:
 
 අවශ්‍ය නම් commit කරන්න:
 
-    git add gitops/apps labs/professional/03-dev-qa-prod-promotion
-    git commit -m "Add Argo CD promotion demo desired state"
+    git add k8s/promotion
+    git commit -m "Add promotion demo desired state"
     git push
 
 ## Create Argo CD Applications
@@ -358,7 +358,7 @@ Safe edit එක:
     python3 - <<'PY'
 from pathlib import Path
 
-p = Path("gitops/apps/dev/promotion-demo/configmap.yaml")
+p = Path("k8s/promotion/dev/configmap.yaml")
 text = p.read_text()
 text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
 p.write_text(text)
@@ -367,11 +367,11 @@ PY
 Verify කරන්න:
 
     grep -nE 'apiVersion|Environment:|Version:' \
-      gitops/apps/dev/promotion-demo/configmap.yaml
+      k8s/promotion/dev/configmap.yaml
 
 Commit සහ push කරන්න:
 
-    git add gitops/apps/dev/promotion-demo/configmap.yaml
+    git add k8s/promotion/dev/configmap.yaml
     git commit -m "Promote demo dev environment to v2"
     git push
 
@@ -408,7 +408,7 @@ qa ConfigMap එකේ HTML version line එක පමණක් update කරන
     python3 - <<'PY'
 from pathlib import Path
 
-p = Path("gitops/apps/qa/promotion-demo/configmap.yaml")
+p = Path("k8s/promotion/qa/configmap.yaml")
 text = p.read_text()
 text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
 p.write_text(text)
@@ -417,11 +417,11 @@ PY
 Verify කරන්න:
 
     grep -nE 'apiVersion|Environment:|Version:' \
-      gitops/apps/qa/promotion-demo/configmap.yaml
+      k8s/promotion/qa/configmap.yaml
 
 Commit සහ push කරන්න:
 
-    git add gitops/apps/qa/promotion-demo/configmap.yaml
+    git add k8s/promotion/qa/configmap.yaml
     git commit -m "Promote demo qa environment to v2"
     git push
 
@@ -455,7 +455,7 @@ prod ConfigMap එකේ HTML version line එක පමණක් update කර�
     python3 - <<'PY'
 from pathlib import Path
 
-p = Path("gitops/apps/prod/promotion-demo/configmap.yaml")
+p = Path("k8s/promotion/prod/configmap.yaml")
 text = p.read_text()
 text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
 p.write_text(text)
@@ -464,11 +464,11 @@ PY
 Verify කරන්න:
 
     grep -nE 'apiVersion|Environment:|Version:' \
-      gitops/apps/prod/promotion-demo/configmap.yaml
+      k8s/promotion/prod/configmap.yaml
 
 Commit සහ push කරන්න:
 
-    git add gitops/apps/prod/promotion-demo/configmap.yaml
+    git add k8s/promotion/prod/configmap.yaml
     git commit -m "Promote demo prod environment to v2"
     git push
 
@@ -540,9 +540,9 @@ Application refresh කරන්න:
 
 Application manifest එකේ path check කරන්න:
 
-    gitops/apps/dev/promotion-demo
-    gitops/apps/qa/promotion-demo
-    gitops/apps/prod/promotion-demo
+    k8s/promotion/dev
+    k8s/promotion/qa
+    k8s/promotion/prod
 
 Files commit කරලා `REPO_URL` එකෙන් configured Git repository එකේ available ද verify කරන්න.
 

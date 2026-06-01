@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: REPO_URL_PLACEHOLDER
     targetRevision: main
-    path: gitops/apps/qa/promotion-demo
+    path: k8s/promotion/qa
   destination:
     server: https://kubernetes.default.svc
     namespace: promotion-qa

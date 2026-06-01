@@ -53,13 +53,13 @@ You will learn:
 
 ## Architecture
 
-This lab uses this repository as the GitOps source.
+This lab uses the sample application repository as the GitOps source.
 
 The desired state is stored under:
 
-    gitops/apps/dev/promotion-demo
-    gitops/apps/qa/promotion-demo
-    gitops/apps/prod/promotion-demo
+    k8s/promotion/dev
+    k8s/promotion/qa
+    k8s/promotion/prod
 
 The Argo CD Application manifests are stored under:
 
@@ -67,9 +67,9 @@ The Argo CD Application manifests are stored under:
 
 Each Argo CD Application points to one environment path:
 
-    promotion-demo-dev  -> gitops/apps/dev/promotion-demo
-    promotion-demo-qa   -> gitops/apps/qa/promotion-demo
-    promotion-demo-prod -> gitops/apps/prod/promotion-demo
+    promotion-demo-dev  -> k8s/promotion/dev
+    promotion-demo-qa   -> k8s/promotion/qa
+    promotion-demo-prod -> k8s/promotion/prod
 
 Each environment deploys:
 
@@ -138,9 +138,9 @@ Verify Argo CD Application CRD:
 
 This lab uses:
 
-    gitops/apps/dev/promotion-demo/
-    gitops/apps/qa/promotion-demo/
-    gitops/apps/prod/promotion-demo/
+    k8s/promotion/dev/
+    k8s/promotion/qa/
+    k8s/promotion/prod/
 
     labs/professional/03-dev-qa-prod-promotion/argocd/
 
@@ -164,7 +164,7 @@ Use the Git URL that Argo CD can read.
 
 Example:
 
-    REPO_URL="https://github.com/<your-user-or-org>/<your-repo>.git"
+    REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
 If this repository is your current remote:
 
@@ -191,9 +191,9 @@ Set namespaces:
 Check the starter version values:
 
     grep -RInE 'Environment:|Version:' \
-      gitops/apps/dev/promotion-demo/configmap.yaml \
-      gitops/apps/qa/promotion-demo/configmap.yaml \
-      gitops/apps/prod/promotion-demo/configmap.yaml
+      k8s/promotion/dev/configmap.yaml \
+      k8s/promotion/qa/configmap.yaml \
+      k8s/promotion/prod/configmap.yaml
 
 Expected starter state:
 
@@ -215,8 +215,8 @@ Check status:
 
 Commit if needed:
 
-    git add gitops/apps labs/professional/03-dev-qa-prod-promotion
-    git commit -m "Add Argo CD promotion demo desired state"
+    git add k8s/promotion
+    git commit -m "Add promotion demo desired state"
     git push
 
 ## Create Argo CD Applications
@@ -358,7 +358,7 @@ Use this safe edit:
     python3 - <<'PY'
 from pathlib import Path
 
-p = Path("gitops/apps/dev/promotion-demo/configmap.yaml")
+p = Path("k8s/promotion/dev/configmap.yaml")
 text = p.read_text()
 text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
 p.write_text(text)
@@ -367,11 +367,11 @@ PY
 Verify:
 
     grep -nE 'apiVersion|Environment:|Version:' \
-      gitops/apps/dev/promotion-demo/configmap.yaml
+      k8s/promotion/dev/configmap.yaml
 
 Commit and push:
 
-    git add gitops/apps/dev/promotion-demo/configmap.yaml
+    git add k8s/promotion/dev/configmap.yaml
     git commit -m "Promote demo dev environment to v2"
     git push
 
@@ -408,7 +408,7 @@ Update only the HTML version in the qa ConfigMap:
     python3 - <<'PY'
 from pathlib import Path
 
-p = Path("gitops/apps/qa/promotion-demo/configmap.yaml")
+p = Path("k8s/promotion/qa/configmap.yaml")
 text = p.read_text()
 text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
 p.write_text(text)
@@ -417,11 +417,11 @@ PY
 Verify:
 
     grep -nE 'apiVersion|Environment:|Version:' \
-      gitops/apps/qa/promotion-demo/configmap.yaml
+      k8s/promotion/qa/configmap.yaml
 
 Commit and push:
 
-    git add gitops/apps/qa/promotion-demo/configmap.yaml
+    git add k8s/promotion/qa/configmap.yaml
     git commit -m "Promote demo qa environment to v2"
     git push
 
@@ -455,7 +455,7 @@ Update only the HTML version in the prod ConfigMap:
     python3 - <<'PY'
 from pathlib import Path
 
-p = Path("gitops/apps/prod/promotion-demo/configmap.yaml")
+p = Path("k8s/promotion/prod/configmap.yaml")
 text = p.read_text()
 text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
 p.write_text(text)
@@ -464,11 +464,11 @@ PY
 Verify:
 
     grep -nE 'apiVersion|Environment:|Version:' \
-      gitops/apps/prod/promotion-demo/configmap.yaml
+      k8s/promotion/prod/configmap.yaml
 
 Commit and push:
 
-    git add gitops/apps/prod/promotion-demo/configmap.yaml
+    git add k8s/promotion/prod/configmap.yaml
     git commit -m "Promote demo prod environment to v2"
     git push
 
@@ -540,9 +540,9 @@ Or use the Argo CD UI:
 
 Check the path in the Application manifest:
 
-    gitops/apps/dev/promotion-demo
-    gitops/apps/qa/promotion-demo
-    gitops/apps/prod/promotion-demo
+    k8s/promotion/dev
+    k8s/promotion/qa
+    k8s/promotion/prod
 
 Make sure the files are committed and available in the Git repository configured in `REPO_URL`.
 
