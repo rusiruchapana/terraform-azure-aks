@@ -10,29 +10,12 @@ This project is designed for:
 
 ## Documentation
 
-Official full documentation:
+Official documentation:
 
 - English: [docs/en](docs/en/README.md)
 - සිංහල: [docs/si](docs/si/README.md)
 
-Aotearoa New Zealand welcome:
-
-- te reo Māori: [docs/mi](docs/mi/README.md)
-
-Community translation starters:
-
-- Hindi: [docs/hi](docs/hi/README.md)
-- Spanish: [docs/es](docs/es/README.md)
-- Portuguese: [docs/pt](docs/pt/README.md)
-- French: [docs/fr](docs/fr/README.md)
-- Arabic: [docs/ar](docs/ar/README.md)
-- Indonesian: [docs/id](docs/id/README.md)
-- Vietnamese: [docs/vi](docs/vi/README.md)
-- Japanese: [docs/ja](docs/ja/README.md)
-- Korean: [docs/ko](docs/ko/README.md)
-- Simplified Chinese: [docs/zh-CN](docs/zh-CN/README.md)
-
-Translation contributions are welcome. See [docs/TRANSLATIONS.md](docs/TRANSLATIONS.md).
+This project currently maintains documentation in English and Sinhala only.
 
 ## Current Platform Capabilities
 

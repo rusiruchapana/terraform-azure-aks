@@ -1,8 +1,12 @@
 # GitOps
 
-This folder contains GitOps desired-state examples and environment promotion structures.
+This folder is the future desired-state structure for GitOps labs and environment promotion.
 
-GitOps means Git is used as the source of truth for Kubernetes workloads and platform configuration.
+Current runnable hands-on labs are under:
+
+    labs/
+
+Use this folder later when Argo CD or Flux syncs Kubernetes manifests, Helm values, or Kustomize overlays from Git.
 
 ## Important distinction
 

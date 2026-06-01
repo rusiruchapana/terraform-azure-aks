@@ -17,6 +17,19 @@ The flow is:
       v
     Demo Kubernetes workload
 
+## Lab goal
+
+By the end of this lab, you should have:
+
+- Argo CD installed in the `argocd` namespace
+- Local access to the Argo CD UI through port-forward
+- An Argo CD Application named `professional-gitops-demo`
+- A demo app synced from a public Git repository
+- The demo app running in the `gitops-sample-dev` namespace
+- Automated sync and self-heal tested
+
+This lab uses a public sample app repository so learners do not need to push changes to GitHub.
+
 ## What you will learn
 
 You will learn:
@@ -71,20 +84,47 @@ Learners do not push anything to GitHub for this lab. Argo CD only reads the sam
 
 You need:
 
-- Azure CLI
 - kubectl
 - Existing AKS cluster
 - Access to the AKS cluster
-- Public GitHub repo with this lab committed and pushed
-- Browser access to the local Argo CD port-forward URL
+- A terminal
+- A web browser
+- Internet access from your laptop to download the Argo CD install manifest
+- Internet access from the cluster to pull container images
+- Access from Argo CD to the public sample Git repository
 
-Check Kubernetes access:
+This lab does not require:
+
+- Docker Desktop
+- Azure Container Registry
+- A CI/CD platform
+- Pushing changes to GitHub
+
+## Install required local tools
+
+### kubectl
+
+Install kubectl:
+
+    https://kubernetes.io/docs/tasks/tools/
+
+Verify kubectl:
+
+    kubectl version --client
+
+## Check local tools and AKS access
+
+Before continuing, verify that kubectl can reach your AKS cluster:
 
     kubectl get nodes
 
 Check current context:
 
     kubectl config current-context
+
+Expected:
+
+    Nodes should show Ready status.
 
 ## Lab files
 
@@ -362,3 +402,13 @@ You completed:
 This prepares you for:
 
     Professional Lab 02 - Flux GitOps
+
+## Important note
+
+This is a professional GitOps lab.
+
+Argo CD runs inside the cluster and reconciles from the Git repository configured in the Application resource.
+
+Local file edits on your laptop are not seen by Argo CD unless those edits are committed and available in the configured Git source.
+
+For this lab, the configured Git source is the public sample app repository.
