@@ -2,9 +2,57 @@
 
 This lab shows how to send OpenTelemetry telemetry into a dedicated OpenTelemetry Collector and visualize the resulting metrics with Prometheus and Grafana.
 
-The default path uses `telemetrygen`, a public OpenTelemetry telemetry generator image. This avoids needing to build and push a custom container image.
+This is a standalone AKS observability lab.
 
-The flow is:
+The default path uses `telemetrygen`, a public OpenTelemetry telemetry generator image.
+
+This avoids needing to build and push a custom container image.
+
+The lab uses:
+
+- AKS
+- Existing Prometheus Operator or kube-prometheus-stack
+- A dedicated OpenTelemetry Collector for this lab
+- A ServiceMonitor for Prometheus scraping
+- `telemetrygen` jobs to generate traces and metrics
+- Prometheus for metric queries
+- Grafana for visualization
+
+## Lab goal
+
+By the end of this lab, you should have:
+
+- A Kubernetes namespace named `practitioner-otel`
+- A dedicated OpenTelemetry Collector deployment named `otel-lab-collector`
+- A collector service that receives OTLP traffic on ports `4317` and `4318`
+- A collector metrics endpoint on port `8889`
+- A ServiceMonitor that lets Prometheus scrape the collector
+- Telemetry generator jobs for traces and metrics
+- OpenTelemetry-generated metrics visible in Prometheus
+- A basic Grafana query or panel for OpenTelemetry metrics
+
+This lab does not modify a shared OpenTelemetry Collector.
+
+This lab does not require a custom application image by default.
+
+## What you will learn
+
+You will learn:
+
+- How OpenTelemetry fits into an AKS monitoring stack
+- How to deploy a dedicated OpenTelemetry Collector for a lab
+- How to receive OTLP telemetry over gRPC and HTTP
+- How to expose collector metrics for Prometheus
+- How to create a ServiceMonitor for Prometheus Operator
+- How to generate test traces and metrics with telemetrygen
+- How to verify telemetry in collector logs
+- How to query OpenTelemetry metrics in Prometheus
+- How to visualize OpenTelemetry metrics in Grafana
+- How to clean up lab resources safely
+
+## Lab architecture
+
+The default flow is:
 
     telemetrygen
       |
@@ -18,23 +66,6 @@ The flow is:
       |
       v
     Grafana
-
-## What you will learn
-
-You will learn:
-
-- How OpenTelemetry fits into an AKS monitoring stack
-- How to deploy a dedicated OpenTelemetry Collector for a lab
-- How to receive OTLP telemetry over gRPC
-- How to expose collector metrics for Prometheus
-- How to create a ServiceMonitor for Prometheus Operator
-- How to generate test traces and metrics with telemetrygen
-- How to verify telemetry in collector logs
-- How to query OpenTelemetry metrics in Prometheus
-- How to visualize OpenTelemetry metrics in Grafana
-- How to clean up lab resources safely
-
-## Architecture
 
 This lab uses a dedicated namespace:
 
@@ -55,40 +86,102 @@ The lab resources are:
       |
       |-- ServiceMonitor for Prometheus scraping
 
-The existing monitoring stack remains in:
+The existing monitoring stack is usually in:
 
     monitoring
 
-Prometheus and Grafana are provided by kube-prometheus-stack.
-
-This lab does not modify the shared OpenTelemetry Collector in the monitoring namespace.
+Prometheus and Grafana are commonly provided by kube-prometheus-stack.
 
 ## What this lab requires
 
 You need:
 
-- Azure CLI
 - kubectl
-- Existing AKS cluster
-- Existing kube-prometheus-stack
-- Prometheus Operator CRDs
+- Helm
+- A terminal
+- A web browser
+- Existing AKS cluster access
+- Existing Prometheus Operator or kube-prometheus-stack
+- ServiceMonitor CRD installed
 - Grafana access
 - Internet access from AKS nodes to pull the telemetrygen image
 
-Check Kubernetes access:
+Optional custom app image path requires:
 
+- Docker
+- Azure CLI
+- Azure Container Registry or another container registry
+
+This lab does not require by default:
+
+- Azure Container Registry
+- Docker Desktop
+- CI/CD platform
+- Custom image build or push
+
+## Install required local tools
+
+### kubectl
+
+Install kubectl:
+
+    https://kubernetes.io/docs/tasks/tools/
+
+Verify kubectl:
+
+    kubectl version --client
+
+### Helm
+
+Install Helm:
+
+    https://helm.sh/docs/intro/install/
+
+Verify Helm:
+
+    helm version
+
+### Azure CLI for optional custom image path
+
+Azure CLI is only needed if you use the optional custom image path with Azure Container Registry.
+
+Install Azure CLI:
+
+    https://learn.microsoft.com/cli/azure/install-azure-cli
+
+Verify Azure CLI:
+
+    az version
+
+### Docker for optional custom image path
+
+Docker is only needed if you build and push the optional FastAPI app image.
+
+Verify Docker:
+
+    docker version
+
+## Check local tools and cluster access
+
+Before continuing, verify:
+
+    kubectl version --client
+    helm version
     kubectl get nodes
 
-Check monitoring stack:
+Set lab variables:
 
-    kubectl get pods -n monitoring
-    helm list -n monitoring
+    NAMESPACE="practitioner-otel"
+    MONITORING_NAMESPACE="monitoring"
+    PROMETHEUS_RELEASE="kube-prometheus-stack"
 
-Check Prometheus Operator CRDs:
+Verify:
 
-    kubectl get crd | grep -E 'servicemonitors|podmonitors|prometheusrules'
+    echo "$NAMESPACE"
+    echo "$MONITORING_NAMESPACE"
+    echo "$PROMETHEUS_RELEASE"
 
-## Lab files
+## Files in this lab
 
 This lab includes:
 
@@ -97,9 +190,6 @@ This lab includes:
 
     manifests/
       Kubernetes manifests for the lab collector, ServiceMonitor, and telemetry generator
-
-    scripts/
-      Helper scripts can be added later if needed
 
 Files:
 
@@ -111,12 +201,9 @@ Files:
     app/main.py
     app/requirements.txt
 
-## Set lab variables
+The default lab path uses only the manifests and the public telemetrygen image.
 
-Set these values for your environment:
-
-    NAMESPACE="practitioner-otel"
-    MONITORING_NAMESPACE="monitoring"
+The app folder is optional.
 
 ## Verify existing monitoring
 
@@ -130,7 +217,26 @@ Check ServiceMonitor support:
 
     kubectl get crd | grep -E 'servicemonitors|podmonitors|prometheusrules'
 
-If the ServiceMonitor CRD is missing, complete Practitioner Lab 10 first and install kube-prometheus-stack.
+Expected:
+
+    ServiceMonitor CRD exists
+
+If the ServiceMonitor CRD is missing, install Prometheus Operator or kube-prometheus-stack before continuing.
+
+For kube-prometheus-stack:
+
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm repo update
+
+    kubectl create namespace "$MONITORING_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+    helm upgrade --install "$PROMETHEUS_RELEASE" prometheus-community/kube-prometheus-stack \
+      --namespace "$MONITORING_NAMESPACE"
+
+Verify after installation:
+
+    kubectl get pods -n "$MONITORING_NAMESPACE"
+    kubectl get crd | grep -E 'servicemonitors|podmonitors|prometheusrules'
 
 ## Create the lab namespace
 
@@ -155,7 +261,7 @@ Verify:
 
 Wait until the collector is Running:
 
-    kubectl rollout status deployment/otel-lab-collector -n "$NAMESPACE"
+    kubectl rollout status deployment/otel-lab-collector -n "$NAMESPACE" --timeout=180s
 
 The collector listens on:
 
@@ -172,6 +278,7 @@ Apply the ServiceMonitor:
 Verify:
 
     kubectl get servicemonitor -n "$NAMESPACE"
+    kubectl describe servicemonitor otel-lab-collector -n "$NAMESPACE"
 
 The ServiceMonitor lets Prometheus scrape:
 
@@ -182,8 +289,8 @@ The ServiceMonitor lets Prometheus scrape:
 Port-forward Prometheus:
 
     kubectl port-forward \
-      --namespace monitoring \
-      svc/kube-prometheus-stack-prometheus \
+      --namespace "$MONITORING_NAMESPACE" \
+      svc/${PROMETHEUS_RELEASE}-prometheus \
       9090:9090
 
 Open Prometheus:
@@ -243,8 +350,8 @@ For metrics, you should see that the collector received generated metrics and da
 Port-forward Prometheus:
 
     kubectl port-forward \
-      --namespace monitoring \
-      svc/kube-prometheus-stack-prometheus \
+      --namespace "$MONITORING_NAMESPACE" \
+      svc/${PROMETHEUS_RELEASE}-prometheus \
       9090:9090
 
 Open Prometheus:
@@ -272,15 +379,15 @@ Stop port-forward with:
 Port-forward Grafana:
 
     kubectl port-forward \
-      --namespace monitoring \
-      svc/kube-prometheus-stack-grafana \
+      --namespace "$MONITORING_NAMESPACE" \
+      svc/${PROMETHEUS_RELEASE}-grafana \
       3000:80
 
 Get the Grafana admin password:
 
     kubectl get secret \
-      --namespace monitoring \
-      kube-prometheus-stack-grafana \
+      --namespace "$MONITORING_NAMESPACE" \
+      ${PROMETHEUS_RELEASE}-grafana \
       -o jsonpath="{.data.admin-password}" | base64 --decode; echo
 
 Open Grafana:
@@ -292,7 +399,9 @@ Login:
     Username: admin
     Password: use the password from the secret command
 
-If Grafana opens without asking for a password and edit options are disabled, sign out and log in again as `admin`. You can also use an incognito or private browser window.
+If Grafana opens without asking for a password and edit options are disabled, sign out and log in again as `admin`.
+
+You can also use an incognito or private browser window.
 
 In Grafana:
 
@@ -321,11 +430,13 @@ Stop port-forward with:
 
 ## Optional: custom application image path
 
-This lab includes a simple FastAPI app under:
+The default lab path uses telemetrygen and does not need a custom image.
+
+This optional path uses the simple FastAPI app under:
 
     app/
 
-You can build and push it to your own registry if your environment allows image push.
+Use this optional path only if your environment allows image push to a container registry.
 
 Example variables:
 
@@ -334,6 +445,10 @@ Example variables:
     IMAGE_NAME="practitioner-otel-app"
     IMAGE_TAG="v1"
     IMAGE="$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG"
+
+Find ACR values:
+
+    az acr list --query "[].{name:name, resourceGroup:resourceGroup, loginServer:loginServer}" -o table
 
 Login to ACR:
 
@@ -351,17 +466,31 @@ If Docker push times out, check network access to ACR:
 
     curl -I https://$ACR_LOGIN_SERVER/v2/
 
-If Azure ACR Tasks are disabled in your subscription, `az acr build` may fail. In that case, continue with the default telemetrygen path.
+If Azure ACR Tasks are disabled in your subscription, `az acr build` may fail.
+
+In that case, continue with the default telemetrygen path.
 
 ## Troubleshooting
 
-Check lab namespace resources:
+### Check lab namespace resources
+
+Check all lab resources:
 
     kubectl get all -n "$NAMESPACE"
+
+### Collector logs do not show telemetry
 
 Check collector logs:
 
     kubectl logs deployment/otel-lab-collector -n "$NAMESPACE" --tail=120
+
+Check telemetrygen jobs:
+
+    kubectl get jobs -n "$NAMESPACE"
+    kubectl logs job/telemetrygen-traces -n "$NAMESPACE"
+    kubectl logs job/telemetrygen-metrics -n "$NAMESPACE"
+
+### ServiceMonitor target does not appear
 
 Check ServiceMonitor:
 
@@ -371,29 +500,61 @@ Check ServiceMonitor:
 Check Prometheus targets:
 
     kubectl port-forward \
-      --namespace monitoring \
-      svc/kube-prometheus-stack-prometheus \
+      --namespace "$MONITORING_NAMESPACE" \
+      svc/${PROMETHEUS_RELEASE}-prometheus \
       9090:9090
 
 Then open:
 
     http://localhost:9090/targets
 
-If a target is down, check:
+Look for:
 
-- Service labels
-- ServiceMonitor selector labels
-- Service port name
-- Collector pod readiness
-- Collector metrics port
+    otel-lab-collector
+
+### ServiceMonitor CRD is missing
+
+Check CRDs:
+
+    kubectl get crd | grep -E 'servicemonitors|podmonitors|prometheusrules'
+
+If missing, install Prometheus Operator or kube-prometheus-stack.
+
+### telemetrygen image pull fails
 
 If telemetrygen has image pull errors, check the image tag in:
 
-    manifests/telemetrygen.yaml
+    labs/practitioner/11-opentelemetry-app/manifests/telemetrygen.yaml
 
-This lab uses:
+The current image is:
 
     ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.152.0
+
+Also check whether AKS nodes can pull images from GitHub Container Registry.
+
+### Grafana service name is different
+
+If this service does not exist:
+
+    svc/${PROMETHEUS_RELEASE}-grafana
+
+List services:
+
+    kubectl get svc -n "$MONITORING_NAMESPACE"
+
+Use the Grafana service name that exists in your cluster.
+
+### Prometheus service name is different
+
+If this service does not exist:
+
+    svc/${PROMETHEUS_RELEASE}-prometheus
+
+List services:
+
+    kubectl get svc -n "$MONITORING_NAMESPACE"
+
+Use the Prometheus service name that exists in your cluster.
 
 ## Cleanup
 
@@ -408,31 +569,38 @@ Delete the lab namespace and all lab resources:
 This removes:
 
 - Dedicated lab OpenTelemetry Collector
-- ServiceMonitor
+- Lab ServiceMonitor
 - telemetrygen jobs
-- Optional lab app resources
+- Optional lab resources in the `practitioner-otel` namespace
 
-This does not remove:
+Do not delete shared monitoring resources that were not created by this lab.
+
+Do not delete:
 
 - kube-prometheus-stack
-- Prometheus
-- Grafana
+- Prometheus Operator CRDs
 - The shared monitoring namespace
-- The shared OpenTelemetry Collector in the monitoring namespace
+- Any shared OpenTelemetry Collector outside this lab namespace
 
-Keep the monitoring stack if you plan to continue with later observability or troubleshooting labs.
+## Security cleanup
 
-## What you completed
+If you used the optional custom image path, remove any image tags that you no longer need.
 
-You completed:
+Do not commit registry credentials or local environment secrets.
 
-- Dedicated OpenTelemetry Collector deployment
-- OTLP receiver setup
-- Prometheus exporter setup
-- ServiceMonitor integration
-- Telemetry generation with telemetrygen
-- Collector log verification
-- Prometheus query verification
-- Grafana visualization
+For production, prefer:
 
-This completes the current Practitioner lab flow.
+- Least privilege access
+- Separate collectors per environment or workload boundary
+- Controlled telemetry retention
+- Secure OTLP endpoints
+- Resource limits on collectors
+- Dashboards and alerts owned by the service team
+
+## Important note
+
+This is a learning lab.
+
+It demonstrates how telemetry flows from an OpenTelemetry source to a collector and then into Prometheus and Grafana.
+
+For production, design your OpenTelemetry architecture around ownership, scaling, security, retention, and alerting requirements.
