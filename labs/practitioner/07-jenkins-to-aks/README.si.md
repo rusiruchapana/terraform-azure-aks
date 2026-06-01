@@ -118,16 +118,19 @@ Separate local test repository එකක් create කරන්න:
 
 Lab files copy කරන්න:
 
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/07-jenkins-to-aks/app/"* app/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/07-jenkins-to-aks/k8s/"* k8s/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/07-jenkins-to-aks/jenkins/Jenkinsfile" Jenkinsfile
+    cp "$PLATFORM_REPO/labs/practitioner/07-jenkins-to-aks/app/"* app/
+    cp "$PLATFORM_REPO/labs/practitioner/07-jenkins-to-aks/k8s/"* k8s/
+    cp "$PLATFORM_REPO/labs/practitioner/07-jenkins-to-aks/jenkins/Jenkinsfile" Jenkinsfile
 
-Git initialize කරන්න:
+Jenkins SCM සඳහා local Git repository එක initialize කරන්න:
 
     git init
     git add .
     git commit -m "Add Jenkins AKS lab app"
     git branch -M main
+
+මේ repository එක local only. Jenkins mounted workspace path එක හරහා මෙය read කරනවා.
+මේ test repository එක GitHub එකට push කරන්න එපා.
 
 Files verify කරන්න:
 

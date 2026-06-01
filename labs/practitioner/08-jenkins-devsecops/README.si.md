@@ -2,9 +2,86 @@
 
 මෙම lab එකෙන් Jenkins pipeline එකකට DevSecOps checks add කරන විදිය ඉගෙන ගන්නවා.
 
-මෙය scan-only lab එකක්. මෙය ACR වලට images push කරන්නේ නැහැ, AKS වලට deploy කරන්නේ නැහැ.
+මෙය standalone scan-only lab එකක්.
 
-මෙම lab එකට අවශ්‍ය නැති දේවල්:
+මෙම lab එක Azure Container Registry එකට images push කරන්නේ නැහැ සහ AKS වලට deploy කරන්නේ නැහැ.
+
+මෙම lab එක use කරන්නේ:
+
+- Docker තුළ locally run කරන Jenkins
+- Local test repository එකක්
+- Security scanning සඳහා Trivy
+- Local Docker image build එකක්
+
+## What you will learn
+
+මෙම lab එකෙන් ඔබට මේ දේවල් ඉගෙන ගන්න පුළුවන්:
+
+- Standalone Jenkins DevSecOps lab එකක් locally run කරන විදිය
+- Docker, kubectl, Trivy, සහ required Jenkins plugins තියෙන custom Jenkins image එකක් build කරන විදිය
+- Local Jenkins pipeline repository එකක් prepare කරන විදිය
+- Trivy use කරලා Dockerfiles සහ Kubernetes YAML scan කරන විදිය
+- Jenkins තුළ local Docker image එකක් build කරන විදිය
+- Saved image archive එකක් Trivy වලින් scan කරන විදිය
+- Scan-only pipelines වලට Azure, registry, හෝ AKS deployment credentials අවශ්‍ය නැත්තේ ඇයි කියලා
+- Jenkins setup එකේ optional suggested plugin failures handle කරන විදිය
+- Local lab resources සියල්ල clean up කරන විදිය
+
+## Lab architecture
+
+Flow එක:
+
+    Local test repository
+      |
+      v
+    Jenkins running in Docker
+      |
+      v
+    Validate files
+      |
+      v
+    Trivy config scan
+      |
+      v
+    Docker image build
+      |
+      v
+    Save image as image.tar
+      |
+      v
+    Trivy image scan
+      |
+      v
+    Summary
+
+Jenkins pipeline එක මේ stages use කරනවා:
+
+    Validate
+      |
+      v
+    Scan Config
+      |
+      v
+    Build Image
+      |
+      v
+    Scan Image
+      |
+      v
+    Summary
+
+## What this lab requires
+
+ඔයාට මේවා අවශ්‍යයි:
+
+- Docker Desktop
+- Git
+- Terminal එකක්
+- Web browser එකක්
+
+මෙම lab එක Jenkins Docker container එකක් තුළ run කරනවා. ඔයාගේ machine එකට Jenkins direct install කරන්න අවශ්‍ය නැහැ.
+
+මෙම lab එකට අවශ්‍ය නැහැ:
 
 - Azure credentials
 - Registry credentials
@@ -12,68 +89,44 @@
 - Jenkins deployment credentials
 - CI/CD deployment variables
 
-මෙය Lab 07 replace කරන්නේ නැහැ.
+## Install required local tools
 
-Lab 07 teaches:
+### Docker Desktop
 
-    validate -> build image -> push image -> deploy -> verify
+ඔයාගේ operating system එකට Docker Desktop install කරන්න:
 
-This lab teaches:
+    https://www.docker.com/products/docker-desktop/
 
-    validate -> scan config -> build image -> scan image -> summary
+Docker Desktop install කළාට පස්සේ ඒක start කරලා terminal එකෙන් Docker verify කරන්න:
 
-## What you will learn
+    docker version
 
-මෙම lab එකෙන් ඔබට මේ දේවල් ඉගෙන ගන්න පුළුවන්:
+Expected:
 
-- Jenkins environment එකට Trivy add කරන විදිය
-- Dockerfiles සහ Kubernetes YAML scan කරන විදිය
-- Jenkins වල local Docker image එකක් build කරන විදිය
-- Saved image archive එකක් Trivy වලින් scan කරන විදිය
-- Scan-only pipelines වලට deployment credentials අවශ්‍ය නැත්තේ ඇයි කියලා
-- Security checks deployment වලින් separate කරන විදිය
+    Docker Client සහ Server sections දෙකම පේන්න ඕන.
 
-## Tool used
+Server section එක නැත්නම් Docker Desktop running නැහැ.
 
-මෙම lab එක Trivy use කරනවා.
+### Git
 
-Trivy scan කරන්න පුළුවන්:
+ඔයාගේ operating system එකට Git install කරන්න:
 
-- Container images
-- Dockerfiles
-- Kubernetes YAML
-- Infrastructure configuration
-- Filesystems
+    https://git-scm.com/downloads
 
-## Why this lab does not deploy
+Git verify කරන්න:
 
-මෙම lab එක DevSecOps checks වලට විතරක් focus කරනවා.
+    git --version
 
-Jenkins deployment flow එක Lab 07 වල cover කරලා තියෙනවා.
+Expected:
 
-මෙම lab එක scan-only විදියට තියාගන්න එකෙන් Azure login, registry push, AKS credentials, rollout verification වගේ deployment steps mix නොකර security scanning තේරුම් ගන්න ලේසි වෙනවා.
+    git version එක successfully print වෙන්න ඕන.
 
-Production Jenkins pipeline එකකදී patterns දෙකම combine කරන්න පුළුවන්:
+## Check local tools
 
-    validate
-      |
-      v
-    scan config
-      |
-      v
-    build image
-      |
-      v
-    scan image
-      |
-      v
-    push image
-      |
-      v
-    deploy
-      |
-      v
-    verify
+Continue කරන්න කලින් verify කරන්න:
+
+    docker version
+    git --version
 
 ## Files in this lab
 
@@ -83,7 +136,7 @@ Production Jenkins pipeline එකකදී patterns දෙකම combine කර
       Static NGINX app files
 
     k8s/
-      Kubernetes manifests used for config scanning
+      Config scanning සඳහා use කරන Kubernetes manifests
 
     jenkins/
       Jenkinsfile DevSecOps pipeline template
@@ -99,11 +152,19 @@ Files:
 
 ## Create the Jenkins DevSecOps test repository
 
-Platform repo root එකෙන් separate local test repository එකක් create කරන්න:
+මෙම commands `terraform-azure-aks` repository root එකේ සිට run කරන්න.
+
+Local test repository එක platform repository එකෙන් පිටත මෙතන create වෙනවා:
+
+    $HOME/terraform-azure-aks-labs
+
+Paths set කරන්න:
 
     LAB_WORKDIR="$HOME/terraform-azure-aks-labs"
     PLATFORM_REPO="$(pwd)"
     APP_REPO="$LAB_WORKDIR/jenkins-devsecops-lab"
+
+Local test repository එක create කරන්න:
 
     mkdir -p "$LAB_WORKDIR"
     rm -rf "$APP_REPO"
@@ -114,18 +175,11 @@ Platform repo root එකෙන් separate local test repository එකක් c
 
 Lab files copy කරන්න:
 
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/08-jenkins-devsecops/app/"* app/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/08-jenkins-devsecops/k8s/"* k8s/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/08-jenkins-devsecops/jenkins/Jenkinsfile" Jenkinsfile
+    cp "$PLATFORM_REPO/labs/practitioner/08-jenkins-devsecops/app/"* app/
+    cp "$PLATFORM_REPO/labs/practitioner/08-jenkins-devsecops/k8s/"* k8s/
+    cp "$PLATFORM_REPO/labs/practitioner/08-jenkins-devsecops/jenkins/Jenkinsfile" Jenkinsfile
 
-Git initialize කරන්න:
-
-    git init
-    git add .
-    git commit -m "Add Jenkins DevSecOps lab app"
-    git branch -M main
-
-Files verify කරන්න:
+Git initialize කරන්න කලින් files verify කරන්න:
 
     find . -maxdepth 3 -type f | sort
 
@@ -138,43 +192,172 @@ Expected files:
     ./k8s/namespace.yaml
     ./k8s/service.yaml
 
-## Add Trivy to the Jenkins image
+Jenkins SCM සඳහා local Git repository එක initialize කරන්න:
 
-Lab 07 වල custom Jenkins image එකක් create කළා.
+    git init
+    git add .
+    git commit -m "Add Jenkins DevSecOps lab app"
+    git branch -M main
 
-මෙම lab එකට `Dockerfile.jenkins` එකට Trivy add කරන්න.
+මේ repository එක local only. Jenkins mounted workspace path එක හරහා මෙය read කරනවා.
 
-kubectl install section එකට පස්සේ මෙය add කරන්න:
+මේ test repository එක GitHub එකට push කරන්න එපා.
+
+Local Git repository එක verify කරන්න:
+
+    git status
+
+Expected:
+
+    On branch main
+    nothing to commit, working tree clean
+
+## Create the custom Jenkins image
+
+මෙම lab එක තමන්ගේම Jenkins image එකක් build කරනවා.
+
+Local test repository එකේ `plugins.txt` create කරන්න:
+
+    cat > plugins.txt <<'EOF_PLUGINS'
+    workflow-aggregator
+    git
+    credentials-binding
+    pipeline-stage-view
+    EOF_PLUGINS
+
+මෙම plugins මෙම lab එකට අවශ්‍ය Jenkins Pipeline සහ Git SCM functionality provide කරනවා.
+
+Local test repository එකේ `Dockerfile.jenkins` create කරන්න:
+
+    cat > Dockerfile.jenkins <<'EOF_DOCKERFILE'
+    FROM jenkins/jenkins:lts-jdk17
+
+    USER root
+
+    RUN apt-get update && \
+        apt-get install -y \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release \
+          apt-transport-https \
+          docker.io && \
+        rm -rf /var/lib/apt/lists/*
+
+    RUN ARCH="$(dpkg --print-architecture)" && \
+        case "$ARCH" in \
+          amd64) KUBECTL_ARCH="amd64" ;; \
+          arm64) KUBECTL_ARCH="arm64" ;; \
+          *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+        esac && \
+        curl -LO "https://dl.k8s.io/release/v1.34.0/bin/linux/${KUBECTL_ARCH}/kubectl" && \
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+        rm kubectl
 
     RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
         | sh -s -- -b /usr/local/bin
 
-Jenkins image එක rebuild කරන්න:
+    RUN usermod -aG docker jenkins
 
-    docker build -t jenkins-aks-lab:local -f Dockerfile.jenkins .
+    USER jenkins
 
-Jenkins restart කරන්න:
+    COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+    RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
+    EOF_DOCKERFILE
 
-    docker rm -f jenkins-aks-lab
+Jenkins image එක build කරන්න:
+
+    docker build -t jenkins-devsecops-lab:local -f Dockerfile.jenkins .
+
+Expected result:
+
+    naming to docker.io/library/jenkins-devsecops-lab:local
+
+## Run Jenkins locally
+
+Same lab names තියෙන previous container හෝ volume තිබුණොත් remove කරන්න:
+
+    docker rm -f jenkins-devsecops-lab 2>/dev/null || true
+    docker volume rm jenkins_home_devsecops_lab 2>/dev/null || true
+
+Jenkins volume එක create කරන්න:
+
+    docker volume create jenkins_home_devsecops_lab
+
+Jenkins run කරන්න:
 
     docker run -d \
-      --name jenkins-aks-lab \
+      --name jenkins-devsecops-lab \
       --user root \
-      -p 8088:8080 \
-      -p 50000:50000 \
+      -p 8090:8080 \
+      -p 50001:50000 \
       -e JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true" \
-      -v jenkins_home_aks_lab:/var/jenkins_home \
+      -v jenkins_home_devsecops_lab:/var/jenkins_home \
       -v /var/run/docker.sock:/var/run/docker.sock \
-      -v "$LAB_WORKDIR/jenkins-aks-cicd-lab:/workspace/jenkins-aks-cicd-lab" \
       -v "$APP_REPO:/workspace/jenkins-devsecops-lab" \
-      jenkins-aks-lab:local
+      jenkins-devsecops-lab:local
 
-Jenkins ඇතුළේ Trivy verify කරන්න:
+මෙම lab එක Jenkins root ලෙස run කරනවා Docker socket access කරන්න. මෙය local learning සඳහා විතරයි.
 
-    docker exec -it jenkins-aks-lab bash
+Container එක running ද verify කරන්න:
 
-    trivy --version
+    docker ps | grep jenkins-devsecops-lab
+
+Initial admin password එක ගන්න:
+
+    docker exec jenkins-devsecops-lab cat /var/jenkins_home/secrets/initialAdminPassword
+
+Jenkins open කරන්න:
+
+    http://localhost:8090
+
+## Jenkins setup wizard guidance
+
+Required Jenkins plugins custom Jenkins image එකේ already installed.
+
+Jenkins plugin installation ගැන අහනවා නම්, මෙම lab එකට suggested plugins මත depend වෙන්න එපා.
+
+Jenkins option එක දෙනවා නම් suggested plugin installation skip කරන්න පුළුවන්.
+
+ඔයා suggested plugins install කළා සහ optional plugins කිහිපයක් fail වුණා නම්, lab එක නවත්තන්න එපා.
+
+මෙම lab එකට අවශ්‍ය නැති optional suggested plugins examples:
+
+- Workspace Cleanup
+- Gradle
+- GitHub Branch Source
+- Pipeline: GitHub Groovy Libraries
+- Pipeline Graph View
+- Email Extension
+
+Jenkins dashboard එකට continue කරලා Pipeline job එකක් create කරන්න පුළුවන්ද බලන්න.
+
+Pipeline job type සහ Git SCM option තියෙනවා නම්, lab එක continue කරන්න.
+
+Pipeline job type හෝ Git SCM option missing නම්, custom image එක සහ fresh volume එක use කරලා Jenkins නැවත create කරන්න.
+
+## Verify tools inside Jenkins
+
+Jenkins container එක ඇතුළේ shell එකක් open කරන්න:
+
+    docker exec -it jenkins-devsecops-lab bash
+
+Tools check කරන්න:
+
+    whoami
     docker version
+    kubectl version --client
+    trivy --version
+
+Expected:
+
+    whoami should show root
+    docker version should work
+    kubectl version --client should work
+    trivy --version should work
+
+Exit කරන්න:
+
     exit
 
 ## Create the Jenkins pipeline job
@@ -198,29 +381,19 @@ Job එක save කරන්න.
 
 මෙම lab එකට Jenkins credentials අවශ්‍ය නැහැ.
 
-## Pipeline stages
-
-Jenkinsfile එක මේ stages use කරනවා:
-
-    Validate
-      |
-      v
-    Scan Config
-      |
-      v
-    Build Image
-      |
-      v
-    Scan Image
-      |
-      v
-    Summary
-
 ## Run the pipeline
 
 Click කරන්න:
 
     Build Now
+
+Pipeline එක මේ stages complete කරන්න ඕන:
+
+    Validate
+    Scan Config
+    Build Image
+    Scan Image
+    Summary
 
 Pipeline එක කරන්නේ:
 
@@ -231,6 +404,13 @@ Pipeline එක කරන්නේ:
 5. Image එක `image.tar` ලෙස save කරනවා
 6. `image.tar` Trivy වලින් scan කරනවා
 7. Summary එක print කරනවා
+
+Expected summary:
+
+    Jenkins DevSecOps checks completed.
+    This lab does not push images to ACR.
+    This lab does not deploy to AKS.
+    Image scanned locally: jenkins-devsecops-demo:<build-number>
 
 ## Learning mode
 
@@ -252,11 +432,13 @@ Change කරන්න:
 
     --exit-code 0
 
-to:
+To:
 
     --exit-code 1
 
-Strict mode carefulව use කරන්න. Public base images වල vulnerabilities තිබිය හැකියි. ඒවා review කිරීම, patch කිරීම, හෝ documented risk acceptance අවශ්‍ය වෙන්න පුළුවන්.
+Strict mode carefulව use කරන්න.
+
+Public base images වල vulnerabilities තිබිය හැකියි. ඒවා review කිරීම, patch කිරීම, හෝ documented risk acceptance අවශ්‍ය වෙන්න පුළුවන්.
 
 ## Why the image is scanned from image.tar
 
@@ -275,23 +457,61 @@ Local Jenkins labs වලදී Trivy direct Docker Desktop image scan එක Do
 
 මෙය local Docker Desktop environments වල scan එක stable කරනවා.
 
-## Expected result
-
-Pipeline එක මේ stages සියල්ල complete කරන්න ඕන:
-
-    Validate
-    Scan Config
-    Build Image
-    Scan Image
-    Summary
-
-Summary එකේ මෙය පේන්න ඕන:
-
-    Jenkins DevSecOps checks completed.
-    This lab does not push images to ACR.
-    This lab does not deploy to AKS.
-
 ## Troubleshooting
+
+### Suggested plugin installation failures
+
+Jenkins suggested plugins වල Workspace Cleanup, Gradle, GitHub Branch Source, Pipeline Graph View, හෝ Email Extension වගේ plugins fail වුණොත්, lab එක වහාම නවත්තන්න එපා.
+
+මෙම lab එක required plugins already installed කරපු custom Jenkins image එකක් use කරනවා.
+
+Jenkins dashboard එකට continue කරලා Pipeline job එක create කරන්න.
+
+Pipeline job type හෝ Git SCM option missing නම්, custom image එක සහ fresh volume එක use කරලා Jenkins නැවත create කරන්න.
+
+### Jenkins dashboard does not open
+
+Container එක check කරන්න:
+
+    docker ps | grep jenkins-devsecops-lab
+
+Logs check කරන්න:
+
+    docker logs jenkins-devsecops-lab --tail=100
+
+Port mapping එක මෙහෙම use කරනවද බලන්න:
+
+    8090:8080
+
+ඊට පස්සේ open කරන්න:
+
+    http://localhost:8090
+
+### Local Git checkout blocked
+
+Jenkins `file://` Git checkout block කළොත්:
+
+    Checkout of Git remote file:///workspace/jenkins-devsecops-lab aborted
+
+Jenkins start කළේ මේ option එකෙන්ද බලන්න:
+
+    -e JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
+
+### Jenkins cannot access Docker
+
+Jenkins Docker access කරන්න බැරි නම්:
+
+    permission denied while trying to connect to the Docker daemon socket
+
+Jenkins start කළේ මේ option එකෙන්ද බලන්න:
+
+    --user root
+
+සහ:
+
+    -v /var/run/docker.sock:/var/run/docker.sock
+
+මෙය local learning lab එකට විතරයි.
 
 ### Trivy config multiple targets error
 
@@ -316,31 +536,21 @@ Trivy image එක හොයාගන්න බැරි නම් හෝ Docker
 
     trivy image --input image.tar
 
-### Jenkins cannot access Docker
-
-Jenkins Docker access කරන්න බැරි නම්:
-
-    permission denied while trying to connect to the Docker daemon socket
-
-Jenkins container එක මෙහෙම run කරන්න:
-
-    --user root
-
-මෙය local learning lab එකට විතරයි.
-
-### Local Git checkout blocked
-
-Jenkins `file://` Git checkout block කළොත්:
-
-    Checkout of Git remote file:///workspace/jenkins-devsecops-lab aborted
-
-Jenkins මේ option එකෙන් run කරන්න:
-
-    -e JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
-
 ## Cleanup
 
-Local test image එක remove කරන්න:
+Jenkins stop කරලා remove කරන්න:
+
+    docker rm -f jenkins-devsecops-lab
+
+Jenkins volume remove කරන්න:
+
+    docker volume rm jenkins_home_devsecops_lab
+
+Custom Jenkins image remove කරන්න:
+
+    docker rmi jenkins-devsecops-lab:local
+
+Pipeline එකෙන් create වුණු local test image එක remove කරන්න:
 
     docker rmi jenkins-devsecops-demo:<build-number> 2>/dev/null || true
 
@@ -352,16 +562,26 @@ Build cache remove කරන්න අවශ්‍ය නම්:
 
     docker builder prune -f
 
-මෙම lab එක AKS resources create කරන්නේ නැහැ සහ images ACR එකට push කරන්නේ නැහැ.
+Optional local repository cleanup:
+
+    rm -rf "$APP_REPO"
+
+මෙම lab එක AKS resources create කරන්නේ නැහැ.
+
+මෙම lab එක ACR වලට images push කරන්නේ නැහැ.
 
 ## Important note
 
 මෙය learning lab එකක්.
 
-මෙම lab එක deployment credentials නැතුව Jenkins DevSecOps scanning teach කරනවා.
+මෙම lab එක Azure, registry, හෝ AKS deployment credentials නැතුව Jenkins DevSecOps scanning teach කරනවා.
+
+Jenkins root ලෙස run කිරීම සහ Docker socket mount කිරීම local lab එකකට acceptable වුණත් production සඳහා recommended නැහැ.
 
 Production Jenkins DevSecOps pipelines වලදී include කරන්න:
 
+- Dedicated Jenkins agents
+- Least privilege permissions
 - Code quality checks
 - Dependency scanning
 - Secret scanning

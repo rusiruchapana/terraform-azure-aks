@@ -2,7 +2,84 @@
 
 This lab shows how to add DevSecOps checks to a Jenkins pipeline.
 
-It is a scan-only lab. It does not push images to ACR and it does not deploy to AKS.
+This is a standalone scan-only lab.
+
+It does not push images to Azure Container Registry and it does not deploy to AKS.
+
+The lab uses:
+
+- Jenkins running locally in Docker
+- A local test repository
+- Trivy for security scanning
+- A local Docker image build
+
+## What you will learn
+
+You will learn:
+
+- How to run a standalone Jenkins DevSecOps lab locally
+- How to build a custom Jenkins image with Docker, kubectl, Trivy, and required Jenkins plugins
+- How to prepare a local Jenkins pipeline repository
+- How to scan Dockerfiles and Kubernetes YAML with Trivy
+- How to build a local Docker image in Jenkins
+- How to scan a saved image archive with Trivy
+- Why scan-only pipelines do not need Azure, registry, or AKS deployment credentials
+- How to handle optional Jenkins suggested plugin failures during setup
+- How to clean up all local lab resources
+
+## Lab architecture
+
+The flow is:
+
+    Local test repository
+      |
+      v
+    Jenkins running in Docker
+      |
+      v
+    Validate files
+      |
+      v
+    Trivy config scan
+      |
+      v
+    Docker image build
+      |
+      v
+    Save image as image.tar
+      |
+      v
+    Trivy image scan
+      |
+      v
+    Summary
+
+The Jenkins pipeline uses these stages:
+
+    Validate
+      |
+      v
+    Scan Config
+      |
+      v
+    Build Image
+      |
+      v
+    Scan Image
+      |
+      v
+    Summary
+
+## What this lab requires
+
+You need:
+
+- Docker Desktop
+- Git
+- A terminal
+- A web browser
+
+This lab runs Jenkins inside Docker. You do not need to install Jenkins directly on your machine.
 
 This lab does not require:
 
@@ -12,68 +89,44 @@ This lab does not require:
 - Jenkins deployment credentials
 - CI/CD deployment variables
 
-It does not replace Lab 07.
+## Install required local tools
 
-Lab 07 teaches:
+### Docker Desktop
 
-    validate -> build image -> push image -> deploy -> verify
+Install Docker Desktop for your operating system:
 
-This lab teaches:
+    https://www.docker.com/products/docker-desktop/
 
-    validate -> scan config -> build image -> scan image -> summary
+After installing Docker Desktop, start it and verify Docker from your terminal:
 
-## What you will learn
+    docker version
 
-You will learn:
+Expected:
 
-- How to add Trivy to a Jenkins environment
-- How to scan Dockerfiles and Kubernetes YAML
-- How to build a local Docker image in Jenkins
-- How to scan a saved image archive with Trivy
-- Why scan-only pipelines do not need deployment credentials
-- How to separate security checks from deployment
+    Docker should show both Client and Server sections.
 
-## Tool used
+If the Server section is missing, Docker Desktop is not running.
 
-This lab uses Trivy.
+### Git
 
-Trivy can scan:
+Install Git for your operating system:
 
-- Container images
-- Dockerfiles
-- Kubernetes YAML
-- Infrastructure configuration
-- Filesystems
+    https://git-scm.com/downloads
 
-## Why this lab does not deploy
+Verify Git:
 
-This lab focuses only on DevSecOps checks.
+    git --version
 
-Deployment with Jenkins is already covered in Lab 07.
+Expected:
 
-Keeping this lab scan-only makes it easier to understand security scanning without mixing it with Azure login, registry push, AKS credentials, or rollout verification.
+    git version should print successfully.
 
-A production Jenkins pipeline can combine both patterns:
+## Check local tools
 
-    validate
-      |
-      v
-    scan config
-      |
-      v
-    build image
-      |
-      v
-    scan image
-      |
-      v
-    push image
-      |
-      v
-    deploy
-      |
-      v
-    verify
+Before continuing, verify:
+
+    docker version
+    git --version
 
 ## Files in this lab
 
@@ -99,11 +152,19 @@ Files:
 
 ## Create the Jenkins DevSecOps test repository
 
-Create a separate local test repository from the platform repo root:
+Run these commands from the `terraform-azure-aks` repository root.
+
+The local test repository is created outside the platform repository under:
+
+    $HOME/terraform-azure-aks-labs
+
+Set paths:
 
     LAB_WORKDIR="$HOME/terraform-azure-aks-labs"
     PLATFORM_REPO="$(pwd)"
     APP_REPO="$LAB_WORKDIR/jenkins-devsecops-lab"
+
+Create the local test repository:
 
     mkdir -p "$LAB_WORKDIR"
     rm -rf "$APP_REPO"
@@ -114,18 +175,11 @@ Create a separate local test repository from the platform repo root:
 
 Copy the lab files:
 
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/08-jenkins-devsecops/app/"* app/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/08-jenkins-devsecops/k8s/"* k8s/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/08-jenkins-devsecops/jenkins/Jenkinsfile" Jenkinsfile
+    cp "$PLATFORM_REPO/labs/practitioner/08-jenkins-devsecops/app/"* app/
+    cp "$PLATFORM_REPO/labs/practitioner/08-jenkins-devsecops/k8s/"* k8s/
+    cp "$PLATFORM_REPO/labs/practitioner/08-jenkins-devsecops/jenkins/Jenkinsfile" Jenkinsfile
 
-Initialize Git:
-
-    git init
-    git add .
-    git commit -m "Add Jenkins DevSecOps lab app"
-    git branch -M main
-
-Verify files:
+Verify files before initializing Git:
 
     find . -maxdepth 3 -type f | sort
 
@@ -138,43 +192,172 @@ Expected files:
     ./k8s/namespace.yaml
     ./k8s/service.yaml
 
-## Add Trivy to the Jenkins image
+Initialize a local Git repository for Jenkins SCM:
 
-Lab 07 created a custom Jenkins image.
+    git init
+    git add .
+    git commit -m "Add Jenkins DevSecOps lab app"
+    git branch -M main
 
-For this lab, add Trivy to `Dockerfile.jenkins`.
+This repository is local only. Jenkins reads it through the mounted workspace path.
 
-Add this after the kubectl install section:
+Do not push this test repository to GitHub.
+
+Verify the local Git repository:
+
+    git status
+
+Expected:
+
+    On branch main
+    nothing to commit, working tree clean
+
+## Create the custom Jenkins image
+
+This lab builds its own Jenkins image.
+
+Create `plugins.txt` in the local test repository:
+
+    cat > plugins.txt <<'EOF_PLUGINS'
+    workflow-aggregator
+    git
+    credentials-binding
+    pipeline-stage-view
+    EOF_PLUGINS
+
+These plugins provide the Jenkins Pipeline and Git SCM functionality required for this lab.
+
+Create `Dockerfile.jenkins` in the local test repository:
+
+    cat > Dockerfile.jenkins <<'EOF_DOCKERFILE'
+    FROM jenkins/jenkins:lts-jdk17
+
+    USER root
+
+    RUN apt-get update && \
+        apt-get install -y \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release \
+          apt-transport-https \
+          docker.io && \
+        rm -rf /var/lib/apt/lists/*
+
+    RUN ARCH="$(dpkg --print-architecture)" && \
+        case "$ARCH" in \
+          amd64) KUBECTL_ARCH="amd64" ;; \
+          arm64) KUBECTL_ARCH="arm64" ;; \
+          *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+        esac && \
+        curl -LO "https://dl.k8s.io/release/v1.34.0/bin/linux/${KUBECTL_ARCH}/kubectl" && \
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+        rm kubectl
 
     RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
         | sh -s -- -b /usr/local/bin
 
-Rebuild the Jenkins image:
+    RUN usermod -aG docker jenkins
 
-    docker build -t jenkins-aks-lab:local -f Dockerfile.jenkins .
+    USER jenkins
 
-Restart Jenkins:
+    COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+    RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
+    EOF_DOCKERFILE
 
-    docker rm -f jenkins-aks-lab
+Build the Jenkins image:
+
+    docker build -t jenkins-devsecops-lab:local -f Dockerfile.jenkins .
+
+Expected result:
+
+    naming to docker.io/library/jenkins-devsecops-lab:local
+
+## Run Jenkins locally
+
+Remove any previous container or volume with the same lab names:
+
+    docker rm -f jenkins-devsecops-lab 2>/dev/null || true
+    docker volume rm jenkins_home_devsecops_lab 2>/dev/null || true
+
+Create a Jenkins volume:
+
+    docker volume create jenkins_home_devsecops_lab
+
+Run Jenkins:
 
     docker run -d \
-      --name jenkins-aks-lab \
+      --name jenkins-devsecops-lab \
       --user root \
-      -p 8088:8080 \
-      -p 50000:50000 \
+      -p 8090:8080 \
+      -p 50001:50000 \
       -e JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true" \
-      -v jenkins_home_aks_lab:/var/jenkins_home \
+      -v jenkins_home_devsecops_lab:/var/jenkins_home \
       -v /var/run/docker.sock:/var/run/docker.sock \
-      -v "$LAB_WORKDIR/jenkins-aks-cicd-lab:/workspace/jenkins-aks-cicd-lab" \
       -v "$APP_REPO:/workspace/jenkins-devsecops-lab" \
-      jenkins-aks-lab:local
+      jenkins-devsecops-lab:local
 
-Verify Trivy inside Jenkins:
+This lab runs Jenkins as root only for local learning so it can access the Docker socket.
 
-    docker exec -it jenkins-aks-lab bash
+Verify the container is running:
 
-    trivy --version
+    docker ps | grep jenkins-devsecops-lab
+
+Get the initial admin password:
+
+    docker exec jenkins-devsecops-lab cat /var/jenkins_home/secrets/initialAdminPassword
+
+Open Jenkins:
+
+    http://localhost:8090
+
+## Jenkins setup wizard guidance
+
+The required Jenkins plugins are already installed in the custom Jenkins image.
+
+If Jenkins asks about plugin installation, do not depend on the suggested plugins for this lab.
+
+You can skip suggested plugin installation if Jenkins gives that option.
+
+If you choose to install suggested plugins and some optional plugins fail, do not stop immediately.
+
+Examples of optional suggested plugins that are not required for this lab include:
+
+- Workspace Cleanup
+- Gradle
+- GitHub Branch Source
+- Pipeline: GitHub Groovy Libraries
+- Pipeline Graph View
+- Email Extension
+
+Continue to the Jenkins dashboard and check whether you can create a Pipeline job.
+
+If the Pipeline job type and Git SCM option are available, continue the lab.
+
+If the Pipeline job type or Git SCM option is missing, recreate Jenkins with the custom image and a fresh volume.
+
+## Verify tools inside Jenkins
+
+Open a shell inside the Jenkins container:
+
+    docker exec -it jenkins-devsecops-lab bash
+
+Check tools:
+
+    whoami
     docker version
+    kubectl version --client
+    trivy --version
+
+Expected:
+
+    whoami should show root
+    docker version should work
+    kubectl version --client should work
+    trivy --version should work
+
+Exit:
+
     exit
 
 ## Create the Jenkins pipeline job
@@ -198,29 +381,19 @@ Save the job.
 
 This lab does not need Jenkins credentials.
 
-## Pipeline stages
-
-The Jenkinsfile uses these stages:
-
-    Validate
-      |
-      v
-    Scan Config
-      |
-      v
-    Build Image
-      |
-      v
-    Scan Image
-      |
-      v
-    Summary
-
 ## Run the pipeline
 
 Click:
 
     Build Now
+
+The pipeline should complete these stages:
+
+    Validate
+    Scan Config
+    Build Image
+    Scan Image
+    Summary
 
 The pipeline should:
 
@@ -231,6 +404,13 @@ The pipeline should:
 5. Save the image to `image.tar`
 6. Scan `image.tar` with Trivy
 7. Print a summary
+
+Expected summary:
+
+    Jenkins DevSecOps checks completed.
+    This lab does not push images to ACR.
+    This lab does not deploy to AKS.
+    Image scanned locally: jenkins-devsecops-demo:<build-number>
 
 ## Learning mode
 
@@ -252,15 +432,17 @@ Change:
 
     --exit-code 0
 
-to:
+To:
 
     --exit-code 1
 
-Use strict mode carefully. Public base images may include vulnerabilities that require review, patching, or documented risk acceptance.
+Use strict mode carefully.
+
+Public base images can include vulnerabilities that require review, patching, or documented risk acceptance.
 
 ## Why the image is scanned from image.tar
 
-In local Jenkins labs, Trivy may fail to scan an image directly from Docker Desktop because of Docker snapshot or daemon issues.
+In local Jenkins labs, Trivy can fail to scan an image directly from Docker Desktop because of Docker snapshot or daemon issues.
 
 This lab avoids that issue by saving the image first:
 
@@ -275,23 +457,61 @@ Then scanning the archive:
 
 This makes the scan more stable in local Docker Desktop environments.
 
-## Expected result
-
-The pipeline should complete all stages:
-
-    Validate
-    Scan Config
-    Build Image
-    Scan Image
-    Summary
-
-The summary should show:
-
-    Jenkins DevSecOps checks completed.
-    This lab does not push images to ACR.
-    This lab does not deploy to AKS.
-
 ## Troubleshooting
+
+### Suggested plugin installation failures
+
+If Jenkins reports failures for suggested plugins such as Workspace Cleanup, Gradle, GitHub Branch Source, Pipeline Graph View, or Email Extension, do not stop the lab immediately.
+
+This lab uses a custom Jenkins image with the required plugins already installed.
+
+Continue to the Jenkins dashboard and create the Pipeline job.
+
+If the Pipeline job type or Git SCM option is missing, recreate Jenkins with a fresh volume using the custom image.
+
+### Jenkins dashboard does not open
+
+Check the container:
+
+    docker ps | grep jenkins-devsecops-lab
+
+Check logs:
+
+    docker logs jenkins-devsecops-lab --tail=100
+
+Make sure the port mapping uses:
+
+    8090:8080
+
+Then open:
+
+    http://localhost:8090
+
+### Local Git checkout blocked
+
+If Jenkins blocks `file://` Git checkout:
+
+    Checkout of Git remote file:///workspace/jenkins-devsecops-lab aborted
+
+Make sure Jenkins was started with:
+
+    -e JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
+
+### Jenkins cannot access Docker
+
+If Jenkins cannot access Docker:
+
+    permission denied while trying to connect to the Docker daemon socket
+
+Make sure Jenkins was started with:
+
+    --user root
+
+And with:
+
+    -v /var/run/docker.sock:/var/run/docker.sock
+
+This is only for the local learning lab.
 
 ### Trivy config multiple targets error
 
@@ -316,31 +536,21 @@ If Trivy cannot find the image or reports Docker snapshot errors, use `docker sa
 
     trivy image --input image.tar
 
-### Jenkins cannot access Docker
-
-If Jenkins cannot access Docker:
-
-    permission denied while trying to connect to the Docker daemon socket
-
-Run the Jenkins container with:
-
-    --user root
-
-This is only for the local learning lab.
-
-### Local Git checkout blocked
-
-If Jenkins blocks `file://` Git checkout:
-
-    Checkout of Git remote file:///workspace/jenkins-devsecops-lab aborted
-
-Run Jenkins with:
-
-    -e JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
-
 ## Cleanup
 
-Remove the local test image:
+Stop and remove Jenkins:
+
+    docker rm -f jenkins-devsecops-lab
+
+Remove the Jenkins volume:
+
+    docker volume rm jenkins_home_devsecops_lab
+
+Remove the custom Jenkins image:
+
+    docker rmi jenkins-devsecops-lab:local
+
+Remove the local test image created by the pipeline:
 
     docker rmi jenkins-devsecops-demo:<build-number> 2>/dev/null || true
 
@@ -352,16 +562,26 @@ Remove build cache if needed:
 
     docker builder prune -f
 
-This lab does not create AKS resources and does not push images to ACR.
+Optional local repository cleanup:
+
+    rm -rf "$APP_REPO"
+
+This lab does not create AKS resources.
+
+This lab does not push images to ACR.
 
 ## Important note
 
 This is a learning lab.
 
-It teaches DevSecOps scanning in Jenkins without deployment credentials.
+It teaches DevSecOps scanning in Jenkins without Azure, registry, or AKS deployment credentials.
+
+Running Jenkins as root and mounting the Docker socket is acceptable for a local lab, but it is not recommended for production.
 
 Production Jenkins DevSecOps pipelines should include:
 
+- Dedicated Jenkins agents
+- Least privilege permissions
 - Code quality checks
 - Dependency scanning
 - Secret scanning

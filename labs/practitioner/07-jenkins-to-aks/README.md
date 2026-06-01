@@ -118,16 +118,19 @@ Create a separate local test repository:
 
 Copy the lab files:
 
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/07-jenkins-to-aks/app/"* app/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/07-jenkins-to-aks/k8s/"* k8s/
-    cp "$PLATFORM_REPO/terraform-azure-aks/labs/practitioner/07-jenkins-to-aks/jenkins/Jenkinsfile" Jenkinsfile
+    cp "$PLATFORM_REPO/labs/practitioner/07-jenkins-to-aks/app/"* app/
+    cp "$PLATFORM_REPO/labs/practitioner/07-jenkins-to-aks/k8s/"* k8s/
+    cp "$PLATFORM_REPO/labs/practitioner/07-jenkins-to-aks/jenkins/Jenkinsfile" Jenkinsfile
 
-Initialize Git:
+Initialize a local Git repository for Jenkins SCM:
 
     git init
     git add .
     git commit -m "Add Jenkins AKS lab app"
     git branch -M main
+
+This repository is local only. Jenkins reads it through the mounted workspace path.
+Do not push this test repository to GitHub.
 
 Verify files:
 
