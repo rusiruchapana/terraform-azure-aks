@@ -60,10 +60,14 @@ This project plans examples for:
 
 Example folders:
 
-    examples/cicd/github-actions
-    examples/cicd/gitlab-ci
-    examples/cicd/azure-devops
-    examples/cicd/jenkins
+    labs/practitioner/01-github-actions-to-aks
+    labs/practitioner/02-github-actions-devsecops
+    labs/practitioner/03-gitlab-ci-to-aks
+    labs/practitioner/04-gitlab-ci-devsecops
+    labs/practitioner/05-azure-devops-to-aks
+    labs/practitioner/06-azure-devops-devsecops
+    labs/practitioner/07-jenkins-to-aks
+    labs/practitioner/08-jenkins-devsecops
 
 ## Common CI/CD flow
 

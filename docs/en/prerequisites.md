@@ -138,6 +138,7 @@ Use your own unique names in terraform.tfvars.
 You will create local files from examples:
 
     backend.tf.example      -> backend.tf
+    terraform.tfvars.minimal.example -> terraform.tfvars
     terraform.tfvars.example -> terraform.tfvars
 
 Do not commit these real local files:

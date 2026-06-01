@@ -44,4 +44,3 @@ Current hands-on lab order එක maintain කරන්නේ මෙතන:
 
 - English: [../en](../en/README.md)
 - te reo Māori welcome: [../mi](../mi/README.md)
-- Community translations: [../TRANSLATIONS.md](../TRANSLATIONS.md)

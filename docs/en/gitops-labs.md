@@ -35,8 +35,8 @@ Folders:
 
     gitops/argocd
     gitops/flux
-    examples/gitops/argocd
-    examples/gitops/flux
+    labs/professional/01-argocd-gitops
+    labs/professional/02-flux-gitops
 
 ## CI/CD vs GitOps
 

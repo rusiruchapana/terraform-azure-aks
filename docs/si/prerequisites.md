@@ -140,6 +140,7 @@ terraform.tfvars file එකේ ඔයාගේම unique names use කරන්
 Example files වලින් local files create කරනවා:
 
     backend.tf.example       -> backend.tf
+    terraform.tfvars.minimal.example -> terraform.tfvars
     terraform.tfvars.example -> terraform.tfvars
 
 Real local files commit කරන්න එපා:

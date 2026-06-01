@@ -44,4 +44,3 @@ The documentation below explains the platform concepts. The labs folder contains
 
 - Sinhala: [../si](../si/README.md)
 - te reo Māori welcome: [../mi](../mi/README.md)
-- Community translations: [../TRANSLATIONS.md](../TRANSLATIONS.md)

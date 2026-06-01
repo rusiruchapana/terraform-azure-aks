@@ -292,7 +292,7 @@ CI/CD flow:
         v
     Deploy to AKS
 
-Supported CI/CD examples planned:
+Supported CI/CD lab tracks:
 
 - GitHub Actions
 - GitLab CI/CD
@@ -309,10 +309,10 @@ GitOps flow:
         v
     AKS cluster desired state
 
-GitOps examples are organized under:
+GitOps desired state and labs are organized under:
 
     gitops/
-    examples/gitops/
+    gitops/
 
 ## 10. What Terraform manages vs what add-ons manage
 

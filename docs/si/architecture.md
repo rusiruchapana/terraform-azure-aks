@@ -312,7 +312,7 @@ GitOps flow:
 GitOps examples තියෙන්නේ:
 
     gitops/
-    examples/gitops/
+    gitops/
 
 ## 10. Terraform manage කරන දේවල් vs add-ons manage කරන දේවල්
 
