@@ -1,8 +1,12 @@
 # Practitioner Lab 09 - Key Vault and Workload Identity
 
-This lab shows how to use AKS Workload Identity to let a pod read a secret from Azure Key Vault.
+This lab shows how to use AKS Workload Identity to let a Kubernetes pod read a secret from Azure Key Vault.
 
-The pod does not store the secret as a raw Kubernetes Secret. Instead, it uses:
+This is a standalone AKS security lab.
+
+The pod does not store the secret as a raw Kubernetes Secret.
+
+Instead, the pod uses:
 
 - Azure Key Vault
 - AKS Workload Identity
@@ -11,20 +15,46 @@ The pod does not store the secret as a raw Kubernetes Secret. Instead, it uses:
 - Secrets Store CSI Driver
 - Azure Key Vault provider for Secrets Store CSI Driver
 
+## Lab goal
+
+By the end of this lab, you should have:
+
+- An Azure Key Vault created for the lab
+- A demo secret stored in Azure Key Vault
+- A user-assigned managed identity
+- A federated identity credential that maps a Kubernetes ServiceAccount to the managed identity
+- A Kubernetes namespace named `practitioner-keyvault`
+- A ServiceAccount named `keyvault-reader`
+- A SecretProviderClass configured for Azure Key Vault
+- A pod named `keyvault-demo`
+- The Key Vault secret mounted into the pod as a file
+
+The secret is mounted into the pod at:
+
+    /mnt/secrets-store/demo-message
+
+Expected pod log output:
+
+    Reading mounted Key Vault secret...
+    Hello from Azure Key Vault using AKS Workload Identity
+
 ## What you will learn
 
 You will learn:
 
 - How AKS Workload Identity works
-- How to enable and verify the Key Vault Secrets Provider addon
+- How to verify AKS OIDC issuer and Workload Identity settings
+- How to verify the Azure Key Vault Secrets Provider addon
 - How to create a Key Vault secret
 - How to create a user-assigned managed identity
 - How to map a Kubernetes ServiceAccount to an Azure managed identity
-- How to use a federated identity credential
+- How to create a federated identity credential
+- How to render Kubernetes manifests with Azure values
 - How to mount a Key Vault secret into a pod
+- How to troubleshoot identity, RBAC, and CSI mount issues
 - How to clean up Azure and Kubernetes resources after testing
 
-## Architecture
+## Lab architecture
 
 The flow is:
 
@@ -37,6 +67,9 @@ The flow is:
     AKS Workload Identity
       |
       v
+    Federated identity credential
+      |
+      v
     User-assigned managed identity
       |
       v
@@ -45,9 +78,13 @@ The flow is:
       v
     Mounted secret file
 
-The secret is mounted into the pod at:
+The Kubernetes pod uses the ServiceAccount.
 
-    /mnt/secrets-store/demo-message
+The ServiceAccount is annotated with the Azure managed identity client ID.
+
+The federated identity credential allows Azure AD to trust tokens from the AKS OIDC issuer for that ServiceAccount subject.
+
+The Secrets Store CSI Driver mounts the Key Vault secret as a file inside the pod.
 
 ## What this lab requires
 
@@ -55,25 +92,115 @@ You need:
 
 - Azure CLI
 - kubectl
-- Existing AKS cluster
+- A terminal
+- An AKS cluster
 - AKS OIDC issuer enabled
 - AKS Workload Identity enabled
-- Azure Key Vault Secrets Provider addon enabled
-- Permission to create Azure managed identities
+- Azure Key Vault Secrets Provider addon enabled, or permission to enable it
+- Permission to create Azure Key Vaults
 - Permission to create or update Azure Key Vault secrets
+- Permission to create user-assigned managed identities
 - Permission to create Azure role assignments
+- Permission to create federated identity credentials
 
-Check Azure and Kubernetes access:
+This lab does not require:
+
+- Docker Desktop
+- A container registry
+- A CI/CD platform
+- A public application endpoint
+
+## Install required local tools
+
+### Azure CLI
+
+Install Azure CLI:
+
+    https://learn.microsoft.com/cli/azure/install-azure-cli
+
+Verify Azure CLI:
+
+    az version
+
+Login to Azure:
+
+    az login
+
+Verify the active account:
 
     az account show --query "{subscriptionId:id, tenantId:tenantId}" -o table
+
+### kubectl
+
+Install kubectl:
+
+    https://kubernetes.io/docs/tasks/tools/
+
+Verify kubectl:
+
+    kubectl version --client
+
+## Check local tools and Azure access
+
+Before continuing, verify:
+
+    az account show --query "{subscriptionId:id, tenantId:tenantId}" -o table
+    kubectl version --client
+
+Set your AKS values:
+
+    RESOURCE_GROUP="<your-resource-group>"
+    AKS_NAME="<your-aks-cluster-name>"
+
+Get AKS credentials:
+
+    az aks get-credentials \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$AKS_NAME" \
+      --overwrite-existing
+
+Verify AKS access:
+
     kubectl get nodes
 
-## Lab files
+## Find your Azure values
+
+Use these commands to find your resource group, AKS cluster, and location.
+
+List resource groups:
+
+    az group list --query "[].{name:name, location:location}" -o table
+
+List AKS clusters:
+
+    az aks list --query "[].{name:name, resourceGroup:resourceGroup, location:location}" -o table
+
+Set your values:
+
+    RESOURCE_GROUP="<your-resource-group>"
+    AKS_NAME="<your-aks-cluster-name>"
+    LOCATION="<your-azure-region>"
+
+Example location format:
+
+    southeastasia
+
+Verify:
+
+    echo "$RESOURCE_GROUP"
+    echo "$AKS_NAME"
+    echo "$LOCATION"
+
+Do not copy values from another environment.
+
+Use values from your own Azure subscription.
+
+## Files in this lab
 
 This lab includes:
 
     manifests/
-      Kubernetes manifests with placeholders
+      Kubernetes manifest templates with placeholders
 
     scripts/
       Helper script to render manifests with real Azure values
@@ -86,13 +213,19 @@ Files:
     manifests/pod.yaml
     scripts/render-manifests.sh
 
+The render script creates this folder during the lab:
+
+    rendered/
+
+The `rendered/` folder is generated output and should not be committed to Git.
+
 ## Set lab variables
 
 Set these values for your environment:
 
-    RESOURCE_GROUP="rg-aks-dev-001"
-    AKS_NAME="aks-dev-001"
-    LOCATION="southeastasia"
+    RESOURCE_GROUP="<your-resource-group>"
+    AKS_NAME="<your-aks-cluster-name>"
+    LOCATION="<your-azure-region>"
     NAMESPACE="practitioner-keyvault"
     SERVICE_ACCOUNT="keyvault-reader"
     IDENTITY_NAME="id-practitioner-keyvault-reader"
@@ -101,6 +234,17 @@ Set these values for your environment:
     SECRET_VALUE="Hello from Azure Key Vault using AKS Workload Identity"
 
 Key Vault names must be globally unique.
+
+A good pattern is to include your initials and a short random suffix:
+
+    KEYVAULT_NAME="kv-akswi-<your-initials>-<random-number>"
+
+Verify:
+
+    echo "$RESOURCE_GROUP"
+    echo "$AKS_NAME"
+    echo "$LOCATION"
+    echo "$KEYVAULT_NAME"
 
 ## Verify AKS Workload Identity and CSI addon
 
@@ -111,6 +255,12 @@ Check the AKS configuration:
       --name "$AKS_NAME" \
       --query "{workloadIdentity:securityProfile.workloadIdentity.enabled, oidcIssuer:oidcIssuerProfile.issuerUrl, keyvaultProvider:addonProfiles.azureKeyvaultSecretsProvider.enabled}" \
       -o table
+
+Expected:
+
+    workloadIdentity is true
+    oidcIssuer has a URL
+    keyvaultProvider is true
 
 Check CSI provider pods:
 
@@ -133,6 +283,16 @@ Verify again:
 
     kubectl get pods -n kube-system | grep -E "csi-secrets-store|secrets-store|keyvault"
 
+If Workload Identity or the OIDC issuer is not enabled, enable them before continuing:
+
+    az aks update \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$AKS_NAME" \
+      --enable-oidc-issuer \
+      --enable-workload-identity
+
+Then verify the AKS configuration again.
+
 ## Create Key Vault
 
 Create a Key Vault with RBAC authorization enabled:
@@ -151,17 +311,27 @@ Verify:
       --query "{name:name, rbac:properties.enableRbacAuthorization}" \
       -o table
 
+Expected:
+
+    rbac is true
+
 ## Give yourself permission to create the secret
 
 Because this lab uses Key Vault RBAC, your signed-in Azure user needs permission to create the demo secret.
 
+Get your signed-in user object ID:
+
     USER_OBJECT_ID=$(az ad signed-in-user show --query id -o tsv)
+
+Get the Key Vault resource ID:
 
     KEYVAULT_ID=$(az keyvault show \
       --name "$KEYVAULT_NAME" \
       --resource-group "$RESOURCE_GROUP" \
       --query id \
       -o tsv)
+
+Assign yourself the Key Vault Secrets Officer role:
 
     az role assignment create \
       --assignee-object-id "$USER_OBJECT_ID" \
@@ -177,6 +347,14 @@ Create the demo secret:
       --vault-name "$KEYVAULT_NAME" \
       --name "$SECRET_NAME" \
       --value "$SECRET_VALUE"
+
+Verify the secret exists:
+
+    az keyvault secret show \
+      --vault-name "$KEYVAULT_NAME" \
+      --name "$SECRET_NAME" \
+      --query "{name:name, enabled:attributes.enabled}" \
+      -o table
 
 ## Create managed identity
 
@@ -213,6 +391,8 @@ Capture identity values:
       --query id \
       -o tsv)
 
+Verify values:
+
     echo "IDENTITY_CLIENT_ID=$IDENTITY_CLIENT_ID"
     echo "IDENTITY_PRINCIPAL_ID=$IDENTITY_PRINCIPAL_ID"
     echo "OIDC_ISSUER=$OIDC_ISSUER"
@@ -227,6 +407,8 @@ Assign the Key Vault Secrets User role to the managed identity:
       --assignee-principal-type ServicePrincipal \
       --role "Key Vault Secrets User" \
       --scope "$KEYVAULT_ID"
+
+RBAC permissions may take a short time to propagate.
 
 ## Create federated identity credential
 
@@ -244,6 +426,17 @@ The subject must match this format exactly:
 
     system:serviceaccount:<namespace>:<service-account-name>
 
+For this lab, the subject is:
+
+    system:serviceaccount:practitioner-keyvault:keyvault-reader
+
+Verify the federated credential:
+
+    az identity federated-credential list \
+      --identity-name "$IDENTITY_NAME" \
+      --resource-group "$RESOURCE_GROUP" \
+      -o table
+
 ## Render Kubernetes manifests
 
 Export values for the render script:
@@ -252,13 +445,29 @@ Export values for the render script:
     export AZURE_TENANT_ID="$(az account show --query tenantId -o tsv)"
     export KEYVAULT_NAME="$KEYVAULT_NAME"
 
-Render manifests:
+Run the render script from the repository root:
 
     ./labs/practitioner/09-key-vault-workload-identity/scripts/render-manifests.sh
 
 Check rendered files:
 
-    find labs/practitioner/09-key-vault-workload-identity/rendered -type f -maxdepth 1 -print
+    find labs/practitioner/09-key-vault-workload-identity/rendered -maxdepth 1 -type f -print
+
+Verify that placeholders were replaced:
+
+    grep -R "PLACEHOLDER" labs/practitioner/09-key-vault-workload-identity/rendered || true
+
+Expected:
+
+    No PLACEHOLDER output should be shown.
+
+Verify rendered ServiceAccount and SecretProviderClass:
+
+    grep -n "azure.workload.identity/client-id" \
+      labs/practitioner/09-key-vault-workload-identity/rendered/serviceaccount.yaml
+
+    grep -n "keyvaultName" \
+      labs/practitioner/09-key-vault-workload-identity/rendered/secretproviderclass.yaml
 
 ## Deploy the lab
 
@@ -269,30 +478,41 @@ Apply the rendered manifests:
     kubectl apply -f labs/practitioner/09-key-vault-workload-identity/rendered/secretproviderclass.yaml
     kubectl apply -f labs/practitioner/09-key-vault-workload-identity/rendered/pod.yaml
 
+Verify Kubernetes resources:
+
+    kubectl get namespace "$NAMESPACE"
+    kubectl get serviceaccount "$SERVICE_ACCOUNT" -n "$NAMESPACE"
+    kubectl get secretproviderclass keyvault-demo-secrets -n "$NAMESPACE"
+    kubectl get pod keyvault-demo -n "$NAMESPACE"
+
 ## Verify the secret mount
 
 Check the pod:
 
-    kubectl get pod keyvault-demo -n practitioner-keyvault
+    kubectl get pod keyvault-demo -n "$NAMESPACE"
 
-Check logs:
+Check pod logs:
 
-    kubectl logs keyvault-demo -n practitioner-keyvault
+    kubectl logs keyvault-demo -n "$NAMESPACE"
 
 Expected output:
 
     Reading mounted Key Vault secret...
     Hello from Azure Key Vault using AKS Workload Identity
 
-You can also inspect the mounted file:
+Inspect the mounted file:
 
-    kubectl exec -n practitioner-keyvault keyvault-demo -- cat /mnt/secrets-store/demo-message
+    kubectl exec -n "$NAMESPACE" keyvault-demo -- cat /mnt/secrets-store/demo-message
+
+Expected output:
+
+    Hello from Azure Key Vault using AKS Workload Identity
 
 ## Troubleshooting
 
 ### Key Vault provider addon is missing
 
-If this returns empty output:
+If this returns empty output or disabled status:
 
     az aks show \
       --resource-group "$RESOURCE_GROUP" \
@@ -307,6 +527,18 @@ Enable the addon:
       --name "$AKS_NAME" \
       --addons azure-keyvault-secrets-provider
 
+### Workload Identity or OIDC issuer is missing
+
+If Workload Identity or OIDC issuer is disabled, enable both:
+
+    az aks update \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$AKS_NAME" \
+      --enable-oidc-issuer \
+      --enable-workload-identity
+
+Then rerun the AKS verification command.
+
 ### RBAC permission delay
 
 If setting or reading secrets fails soon after role assignment, wait one or two minutes and retry.
@@ -317,7 +549,7 @@ Azure RBAC role assignments can take time to propagate.
 
 Describe the pod:
 
-    kubectl describe pod keyvault-demo -n practitioner-keyvault
+    kubectl describe pod keyvault-demo -n "$NAMESPACE"
 
 Look for CSI mount errors, identity errors, or Key Vault access errors.
 
@@ -339,15 +571,37 @@ The federated credential subject must exactly match:
 
     system:serviceaccount:practitioner-keyvault:keyvault-reader
 
-If the namespace or service account name changes, recreate the federated credential.
+Verify:
+
+    az identity federated-credential list \
+      --identity-name "$IDENTITY_NAME" \
+      --resource-group "$RESOURCE_GROUP" \
+      --query "[].{name:name, subject:subject, issuer:issuer}" \
+      -o table
+
+### Key Vault access denied
+
+Verify that the managed identity has the Key Vault Secrets User role on the Key Vault scope:
+
+    az role assignment list \
+      --assignee "$IDENTITY_PRINCIPAL_ID" \
+      --scope "$KEYVAULT_ID" \
+      --query "[].{role:roleDefinitionName, principalId:principalId}" \
+      -o table
 
 ## Cleanup
 
-This lab creates Azure and Kubernetes resources. Clean up after testing to avoid leaving identities, role assignments, and Key Vault resources behind.
-
 Delete Kubernetes resources:
 
-    kubectl delete namespace practitioner-keyvault --ignore-not-found
+    kubectl delete namespace "$NAMESPACE" --ignore-not-found
+
+Delete the federated identity credential:
+
+    az identity federated-credential delete \
+      --name "fic-practitioner-keyvault-reader" \
+      --identity-name "$IDENTITY_NAME" \
+      --resource-group "$RESOURCE_GROUP" \
+      --yes
 
 Delete the managed identity:
 
@@ -367,7 +621,30 @@ Optional purge:
       --name "$KEYVAULT_NAME" \
       --location "$LOCATION"
 
-If purge protection is enabled, the Key Vault cannot be purged until the retention period ends.
+Purge may fail if purge protection is enabled or if your account does not have purge permission.
+
+Delete generated rendered manifests:
+
+    rm -rf labs/practitioner/09-key-vault-workload-identity/rendered
+
+Do not delete the template manifests under:
+
+    labs/practitioner/09-key-vault-workload-identity/manifests/
+
+## Security cleanup
+
+After testing, remove or rotate any demo secrets that should not remain in Azure Key Vault.
+
+Do not commit rendered manifests that contain real Azure values.
+
+For production, prefer:
+
+- Least privilege access
+- Separate managed identities per workload
+- Separate Key Vaults or secret scopes where appropriate
+- Secret rotation
+- Monitoring for Key Vault access
+- Azure Policy controls for workload identity and Key Vault access
 
 ## Important note
 
