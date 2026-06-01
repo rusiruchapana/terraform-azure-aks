@@ -6,29 +6,12 @@ This is a professional GitOps lab.
 
 The goal is to understand environment promotion through Git, not direct `kubectl apply`.
 
-The flow is:
-
-    Git repository
-      |
-      v
-    Argo CD Applications
-      |
-      +--> promotion-demo-dev
-      +--> promotion-demo-qa
-      +--> promotion-demo-prod
-      |
-      v
-    AKS namespaces
-      |
-      +--> promotion-dev
-      +--> promotion-qa
-      +--> promotion-prod
-
 ## Lab goal
 
-By the end of this lab, you should have:
+By the end of this lab, you will have:
 
-- Three GitOps desired-state folders for dev, qa, and prod
+- A fork of the sample GitOps application repository
+- dev, qa, and prod desired-state folders in the sample repository
 - Three Argo CD Applications
 - Three AKS namespaces
 - A demo app running in each environment
@@ -43,27 +26,39 @@ By the end of this lab, you should have:
 You will learn:
 
 - How GitOps promotion works
+- Why app desired state belongs in an application GitOps repository
 - How dev, qa, and prod desired state can be separated
-- How Argo CD tracks multiple applications
+- How Argo CD tracks multiple Applications
 - How to promote a change environment by environment
 - Why local file changes are not enough for GitOps
 - How Argo CD sync and self-heal work
 - How to verify promotion using kubectl and browser access
-- How to clean up the promotion lab
 
 ## Architecture
 
-This lab uses the sample application repository as the GitOps source.
+This lab uses two repositories.
 
-The desired state is stored under:
+Platform and lab repository:
+
+    terraform-azure-aks
+
+This repository contains:
+
+    labs/professional/03-dev-qa-prod-promotion/README.md
+    labs/professional/03-dev-qa-prod-promotion/README.si.md
+    labs/professional/03-dev-qa-prod-promotion/argocd/application-dev.yaml
+    labs/professional/03-dev-qa-prod-promotion/argocd/application-qa.yaml
+    labs/professional/03-dev-qa-prod-promotion/argocd/application-prod.yaml
+
+Sample application GitOps repository:
+
+    aks-gitops-sample-app
+
+The sample repository contains the application desired state:
 
     k8s/promotion/dev
     k8s/promotion/qa
     k8s/promotion/prod
-
-The Argo CD Application manifests are stored under:
-
-    labs/professional/03-dev-qa-prod-promotion/argocd
 
 Each Argo CD Application points to one environment path:
 
@@ -89,7 +84,7 @@ You need:
 - Existing AKS cluster access
 - Existing Argo CD installation
 - Access to the Argo CD UI
-- This repository available through a Git URL that Argo CD can read
+- A fork of the sample app repository
 
 This lab does not require:
 
@@ -134,31 +129,9 @@ Verify Argo CD Application CRD:
 
     kubectl get crd applications.argoproj.io
 
-## Lab files
-
-This lab uses:
-
-    k8s/promotion/dev/
-    k8s/promotion/qa/
-    k8s/promotion/prod/
-
-    labs/professional/03-dev-qa-prod-promotion/argocd/
-
-Files:
-
-    namespace.yaml
-    configmap.yaml
-    deployment.yaml
-    service.yaml
-    kustomization.yaml
-
-    application-dev.yaml
-    application-qa.yaml
-    application-prod.yaml
-
 ## Fork the sample app repository
 
-This lab uses a separate sample application GitOps repository:
+This lab uses this sample application GitOps repository:
 
     https://github.com/andrewferdinandus/aks-gitops-sample-app
 
@@ -167,10 +140,6 @@ Fork this repository into your own GitHub account or organization.
 Example fork URL:
 
     https://github.com/<your-user-or-org>/aks-gitops-sample-app.git
-
-Use your fork as the GitOps source:
-
-    REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
 Why use a fork?
 
@@ -182,11 +151,33 @@ Argo CD reads desired state from Git. In this lab, you will promote the app from
 
 You need write access to push those changes. A fork gives you your own copy of the sample repository.
 
+## Clone your fork
+
+Go to your projects folder:
+
+    cd /Users/andrewferdinandus/projcts
+
+Clone your fork:
+
+    git clone https://github.com/<your-user-or-org>/aks-gitops-sample-app.git
+
+Enter the sample app repository:
+
+    cd aks-gitops-sample-app
+
+Set the sample repo directory:
+
+    SAMPLE_REPO_DIR="$(pwd)"
+
+Verify:
+
+    echo "$SAMPLE_REPO_DIR"
+
 ## Set lab variables
 
 Set your sample app repository URL.
 
-Use your fork of the sample app repository:
+Use your fork:
 
     REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
@@ -194,9 +185,21 @@ Verify:
 
     echo "$REPO_URL"
 
+Set the platform repo directory:
+
+    PLATFORM_REPO_DIR="/Users/andrewferdinandus/projcts/terraform-azure-aks"
+
+Verify:
+
+    echo "$PLATFORM_REPO_DIR"
+
 ## Verify starter desired state
 
-Check the starter version values:
+Run this from the sample app repository:
+
+    cd "$SAMPLE_REPO_DIR"
+
+Check starter version values:
 
     grep -RInE 'Environment:|Version:' \
       k8s/promotion/dev/configmap.yaml \
@@ -209,25 +212,21 @@ Expected starter state:
     qa   = v1
     prod = v1
 
-## Commit and publish desired state
-
-Argo CD reads from Git.
-
-Local files are not enough.
-
-Before applying the Argo CD Applications, make sure the desired-state files are committed and available in the Git repository configured in `REPO_URL`.
-
-Check status:
+Check Git status:
 
     git status --short
 
-Commit if needed:
+If you changed or added files in the sample app repository, commit and push them:
 
     git add k8s/promotion
     git commit -m "Add promotion demo desired state"
     git push
 
 ## Create Argo CD Applications
+
+Run these commands from the platform repository:
+
+    cd "$PLATFORM_REPO_DIR"
 
 Apply the dev Application:
 
@@ -357,20 +356,13 @@ If the browser shows old content, restart the port-forward and hard refresh the 
 
 ## Promote dev to v2
 
-Update only the HTML version in the dev ConfigMap.
+Run this from the sample app repository:
 
-Do not use a broad sed replacement, because it can accidentally change `apiVersion: v1`.
+    cd "$SAMPLE_REPO_DIR"
 
-Use this safe edit:
+Update only the HTML version in the dev ConfigMap:
 
-    python3 - <<'PY'
-from pathlib import Path
-
-p = Path("k8s/promotion/dev/configmap.yaml")
-text = p.read_text()
-text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
-p.write_text(text)
-PY
+    python3 -c 'from pathlib import Path; p=Path("k8s/promotion/dev/configmap.yaml"); text=p.read_text(); p.write_text(text.replace("<p>Version: v1</p>", "<p>Version: v2</p>"))'
 
 Verify:
 
@@ -411,16 +403,13 @@ At this point:
 
 ## Promote qa to v2
 
+Run this from the sample app repository:
+
+    cd "$SAMPLE_REPO_DIR"
+
 Update only the HTML version in the qa ConfigMap:
 
-    python3 - <<'PY'
-from pathlib import Path
-
-p = Path("k8s/promotion/qa/configmap.yaml")
-text = p.read_text()
-text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
-p.write_text(text)
-PY
+    python3 -c 'from pathlib import Path; p=Path("k8s/promotion/qa/configmap.yaml"); text=p.read_text(); p.write_text(text.replace("<p>Version: v1</p>", "<p>Version: v2</p>"))'
 
 Verify:
 
@@ -458,16 +447,13 @@ At this point:
 
 ## Promote prod to v2
 
+Run this from the sample app repository:
+
+    cd "$SAMPLE_REPO_DIR"
+
 Update only the HTML version in the prod ConfigMap:
 
-    python3 - <<'PY'
-from pathlib import Path
-
-p = Path("k8s/promotion/prod/configmap.yaml")
-text = p.read_text()
-text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
-p.write_text(text)
-PY
+    python3 -c 'from pathlib import Path; p=Path("k8s/promotion/prod/configmap.yaml"); text=p.read_text(); p.write_text(text.replace("<p>Version: v1</p>", "<p>Version: v2</p>"))'
 
 Verify:
 
@@ -572,13 +558,7 @@ If you see an error like:
 
     The Kubernetes API could not find version "v2" of /ConfigMap
 
-You accidentally changed:
-
-    apiVersion: v1
-
-to:
-
-    apiVersion accidentally changed to the wrong value
+You accidentally changed the Kubernetes API version line.
 
 Fix it back to:
 

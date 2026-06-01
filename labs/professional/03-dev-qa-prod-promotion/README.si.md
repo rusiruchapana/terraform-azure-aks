@@ -6,29 +6,12 @@
 
 Goal එක direct `kubectl apply` කිරීම නෙවෙයි. Goal එක Git හරහා environment promotion තේරුම් ගැනීමයි.
 
-Flow එක:
-
-    Git repository
-      |
-      v
-    Argo CD Applications
-      |
-      +--> promotion-demo-dev
-      +--> promotion-demo-qa
-      +--> promotion-demo-prod
-      |
-      v
-    AKS namespaces
-      |
-      +--> promotion-dev
-      +--> promotion-qa
-      +--> promotion-prod
-
 ## Lab goal
 
 මෙම lab එක අවසානයේ ඔයාට මේවා තිබිය යුතුයි:
 
-- dev, qa, prod සඳහා GitOps desired-state folders තුනක්
+- Sample GitOps application repository එකේ fork එකක්
+- Sample repository එකේ dev, qa, prod desired-state folders
 - Argo CD Applications තුනක්
 - AKS namespaces තුනක්
 - එක් එක් environment එකේ running demo app එකක්
@@ -43,27 +26,39 @@ Flow එක:
 මෙම lab එකෙන් ඔබට මේවා ඉගෙන ගන්න පුළුවන්:
 
 - GitOps promotion වැඩ කරන ආකාරය
+- App desired state application GitOps repository එකක තියෙන්න ඕන ඇයි
 - dev, qa, prod desired state වෙන වෙනම තබන ආකාරය
-- Argo CD applications කිහිපයක් track කරන ආකාරය
+- Argo CD Applications කිහිපයක් track කරන ආකාරය
 - Change එකක් environment by environment promote කරන ආකාරය
 - GitOps වල local file changes පමණක් ප්‍රමාණවත් නැත්තේ ඇයි
 - Argo CD sync සහ self-heal වැඩ කරන ආකාරය
 - kubectl සහ browser access හරහා promotion verify කරන ආකාරය
-- Promotion lab cleanup කරන ආකාරය
 
 ## Architecture
 
-මෙම lab එක GitOps source එක ලෙස sample application repository එක use කරනවා.
+මෙම lab එක repositories දෙකක් use කරනවා.
 
-Desired state තියෙන්නේ:
+Platform සහ lab repository:
+
+    terraform-azure-aks
+
+මෙම repository එකේ තියෙන්නේ:
+
+    labs/professional/03-dev-qa-prod-promotion/README.md
+    labs/professional/03-dev-qa-prod-promotion/README.si.md
+    labs/professional/03-dev-qa-prod-promotion/argocd/application-dev.yaml
+    labs/professional/03-dev-qa-prod-promotion/argocd/application-qa.yaml
+    labs/professional/03-dev-qa-prod-promotion/argocd/application-prod.yaml
+
+Sample application GitOps repository:
+
+    aks-gitops-sample-app
+
+Sample repository එකේ application desired state තියෙන්නේ:
 
     k8s/promotion/dev
     k8s/promotion/qa
     k8s/promotion/prod
-
-Argo CD Application manifests තියෙන්නේ:
-
-    labs/professional/03-dev-qa-prod-promotion/argocd
 
 එක් එක් Argo CD Application එක environment path එකකට point කරනවා:
 
@@ -89,7 +84,7 @@ App එක ConfigMap එකකින් environment-specific HTML page serve ක
 - Existing AKS cluster access
 - Existing Argo CD installation
 - Argo CD UI access
-- Argo CD ට read කළ හැකි Git URL එකක්
+- Sample app repository එකේ fork එකක්
 
 මෙම lab එකට අවශ්‍ය නැහැ:
 
@@ -134,31 +129,9 @@ Argo CD Application CRD verify කරන්න:
 
     kubectl get crd applications.argoproj.io
 
-## Lab files
-
-මෙම lab එක use කරන files:
-
-    k8s/promotion/dev/
-    k8s/promotion/qa/
-    k8s/promotion/prod/
-
-    labs/professional/03-dev-qa-prod-promotion/argocd/
-
-Files:
-
-    namespace.yaml
-    configmap.yaml
-    deployment.yaml
-    service.yaml
-    kustomization.yaml
-
-    application-dev.yaml
-    application-qa.yaml
-    application-prod.yaml
-
 ## Fork the sample app repository
 
-මෙම lab එක වෙනම sample application GitOps repository එකක් use කරනවා:
+මෙම lab එක මෙම sample application GitOps repository එක use කරනවා:
 
     https://github.com/andrewferdinandus/aks-gitops-sample-app
 
@@ -167,10 +140,6 @@ Files:
 Example fork URL:
 
     https://github.com/<your-user-or-org>/aks-gitops-sample-app.git
-
-GitOps source එක විදියට ඔයාගේ fork එක use කරන්න:
-
-    REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
 Fork එකක් use කරන්නේ ඇයි?
 
@@ -182,11 +151,33 @@ Argo CD desired state read කරන්නේ Git වලින්. මෙම lab
 
 ඒ changes push කරන්න ඔයාට write access ඕන. Fork එකක් දාගත්තම sample repository එකේ ඔයාගේම copy එකක් ලැබෙනවා.
 
+## Clone your fork
+
+ඔයාගේ projects folder එකට යන්න:
+
+    cd /Users/andrewferdinandus/projcts
+
+ඔයාගේ fork එක clone කරන්න:
+
+    git clone https://github.com/<your-user-or-org>/aks-gitops-sample-app.git
+
+Sample app repository එකට යන්න:
+
+    cd aks-gitops-sample-app
+
+Sample repo directory set කරන්න:
+
+    SAMPLE_REPO_DIR="$(pwd)"
+
+Verify කරන්න:
+
+    echo "$SAMPLE_REPO_DIR"
+
 ## Set lab variables
 
 ඔයාගේ sample app repository URL එක set කරන්න.
 
-Sample app repository එකේ ඔයාගේ fork එක use කරන්න:
+ඔයාගේ fork එක use කරන්න:
 
     REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
@@ -194,7 +185,19 @@ Verify කරන්න:
 
     echo "$REPO_URL"
 
+Platform repo directory set කරන්න:
+
+    PLATFORM_REPO_DIR="/Users/andrewferdinandus/projcts/terraform-azure-aks"
+
+Verify කරන්න:
+
+    echo "$PLATFORM_REPO_DIR"
+
 ## Verify starter desired state
+
+මෙය sample app repository එකෙන් run කරන්න:
+
+    cd "$SAMPLE_REPO_DIR"
 
 Starter version values check කරන්න:
 
@@ -209,25 +212,21 @@ Expected starter state:
     qa   = v1
     prod = v1
 
-## Commit and publish desired state
-
-Argo CD Git වලින් read කරනවා.
-
-Local files පමණක් ප්‍රමාණවත් නැහැ.
-
-Argo CD Applications apply කරන්න කලින් desired-state files commit කරලා `REPO_URL` එකෙන් configured Git repository එකේ available වෙන්න ඕන.
-
-Status check කරන්න:
+Git status check කරන්න:
 
     git status --short
 
-අවශ්‍ය නම් commit කරන්න:
+Sample app repository එකේ files change/add කරලා තියෙනවා නම් commit සහ push කරන්න:
 
     git add k8s/promotion
     git commit -m "Add promotion demo desired state"
     git push
 
 ## Create Argo CD Applications
+
+මෙම commands platform repository එකෙන් run කරන්න:
+
+    cd "$PLATFORM_REPO_DIR"
 
 dev Application apply කරන්න:
 
@@ -357,20 +356,13 @@ Browser එක old content පෙන්වනවා නම්, port-forward rest
 
 ## Promote dev to v2
 
-dev ConfigMap එකේ HTML version line එක පමණක් update කරන්න.
+මෙය sample app repository එකෙන් run කරන්න:
 
-Broad sed replacement use කරන්න එපා. එහෙම කළොත් `apiVersion: v1` වැරදිලා වෙනස් වෙන්න පුළුවන්.
+    cd "$SAMPLE_REPO_DIR"
 
-Safe edit එක:
+dev ConfigMap එකේ HTML version line එක පමණක් update කරන්න:
 
-    python3 - <<'PY'
-from pathlib import Path
-
-p = Path("k8s/promotion/dev/configmap.yaml")
-text = p.read_text()
-text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
-p.write_text(text)
-PY
+    python3 -c 'from pathlib import Path; p=Path("k8s/promotion/dev/configmap.yaml"); text=p.read_text(); p.write_text(text.replace("<p>Version: v1</p>", "<p>Version: v2</p>"))'
 
 Verify කරන්න:
 
@@ -411,16 +403,13 @@ Expected:
 
 ## Promote qa to v2
 
+මෙය sample app repository එකෙන් run කරන්න:
+
+    cd "$SAMPLE_REPO_DIR"
+
 qa ConfigMap එකේ HTML version line එක පමණක් update කරන්න:
 
-    python3 - <<'PY'
-from pathlib import Path
-
-p = Path("k8s/promotion/qa/configmap.yaml")
-text = p.read_text()
-text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
-p.write_text(text)
-PY
+    python3 -c 'from pathlib import Path; p=Path("k8s/promotion/qa/configmap.yaml"); text=p.read_text(); p.write_text(text.replace("<p>Version: v1</p>", "<p>Version: v2</p>"))'
 
 Verify කරන්න:
 
@@ -458,16 +447,13 @@ prod තවම v1 ද verify කරන්න:
 
 ## Promote prod to v2
 
+මෙය sample app repository එකෙන් run කරන්න:
+
+    cd "$SAMPLE_REPO_DIR"
+
 prod ConfigMap එකේ HTML version line එක පමණක් update කරන්න:
 
-    python3 - <<'PY'
-from pathlib import Path
-
-p = Path("k8s/promotion/prod/configmap.yaml")
-text = p.read_text()
-text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
-p.write_text(text)
-PY
+    python3 -c 'from pathlib import Path; p=Path("k8s/promotion/prod/configmap.yaml"); text=p.read_text(); p.write_text(text.replace("<p>Version: v1</p>", "<p>Version: v2</p>"))'
 
 Verify කරන්න:
 
@@ -572,13 +558,7 @@ Kubernetes වලින් direct verify කරන්න:
 
     The Kubernetes API could not find version "v2" of /ConfigMap
 
-ඔයා වැරදිලා මේක වෙනස් කරලා:
-
-    apiVersion: v1
-
-මේකට:
-
-    apiVersion accidentally changed to the wrong value
+ඔයා වැරදිලා Kubernetes API version line එක වෙනස් කරලා.
 
 ඒක නැවත fix කරන්න:
 
