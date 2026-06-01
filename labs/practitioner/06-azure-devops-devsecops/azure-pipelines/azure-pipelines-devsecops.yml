@@ -68,10 +68,12 @@ stages:
         steps:
           - script: |
               docker build \
+                --platform linux/amd64 \
                 -t "$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)" \
                 backend
 
               docker build \
+                --platform linux/amd64 \
                 -t "$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)" \
                 frontend
 
