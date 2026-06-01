@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/**"
+      - "labs/practitioner/01-github-actions-to-aks/**"
       - ".github/workflows/build-deploy-aks.yaml"
 
 env:
@@ -26,14 +26,14 @@ jobs:
 
       - name: Validate required files exist
         run: |
-          test -f terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/app/Dockerfile
-          test -f terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/k8s/namespace.yaml
-          test -f terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml
-          test -f terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/k8s/service.yaml
+          test -f labs/practitioner/01-github-actions-to-aks/app/Dockerfile
+          test -f labs/practitioner/01-github-actions-to-aks/k8s/namespace.yaml
+          test -f labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml
+          test -f labs/practitioner/01-github-actions-to-aks/k8s/service.yaml
 
       - name: Check image placeholder exists
         run: |
-          grep -q "IMAGE_PLACEHOLDER" terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml
+          grep -q "IMAGE_PLACEHOLDER" labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml
 
   build_push:
     name: Build and push image
@@ -61,7 +61,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/app
+          context: labs/practitioner/01-github-actions-to-aks/app
           push: true
           tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
@@ -104,13 +104,13 @@ jobs:
 
           echo "Deploying image with commit SHA tag."
 
-          kubectl apply -f terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/k8s/namespace.yaml
+          kubectl apply -f labs/practitioner/01-github-actions-to-aks/k8s/namespace.yaml
 
           sed "s|IMAGE_PLACEHOLDER|${IMAGE}|g" \
-            terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml \
+            labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml \
             | kubectl apply -f -
 
-          kubectl apply -f terraform-azure-aks/labs/practitioner/01-github-actions-to-aks/k8s/service.yaml
+          kubectl apply -f labs/practitioner/01-github-actions-to-aks/k8s/service.yaml
 
   verify:
     name: Verify deployment
