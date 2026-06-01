@@ -47,12 +47,14 @@ stages:
                 --password-stdin
 
               docker build \
+                --platform linux/amd64 \
                 -t "$(REGISTRY_LOGIN_SERVER)/$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)" \
                 backend
 
               docker push "$(REGISTRY_LOGIN_SERVER)/$(BACKEND_IMAGE_NAME):$(Build.SourceVersion)"
 
               docker build \
+                --platform linux/amd64 \
                 -t "$(REGISTRY_LOGIN_SERVER)/$(FRONTEND_IMAGE_NAME):$(Build.SourceVersion)" \
                 frontend
 
