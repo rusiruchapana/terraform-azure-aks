@@ -92,7 +92,7 @@ Lowercase letters සහ numbers use කරන්න.
 
 Example:
 
-    acraksdev001andrew
+    <your-acr-name>
 
 Uppercase letters හෝ special characters use කරන්න එපා.
 
@@ -158,17 +158,17 @@ Image push:
 
 Example login server:
 
-    acraksdev001andrew.azurecr.io
+    <your-acr-login-server>
 
 ## ACR image AKS එකට deploy කිරීම
 
 Example image reference:
 
-    acraksdev001andrew.azurecr.io/my-app:v1
+    <your-acr-login-server>/my-app:v1
 
 Kubernetes Deployment example:
 
-    image: acraksdev001andrew.azurecr.io/my-app:v1
+    image: <your-acr-login-server>/my-app:v1
 
 AcrPull properly configured නම් ACR සඳහා imagePullSecret අවශ්‍ය නැහැ.
 

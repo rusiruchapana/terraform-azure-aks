@@ -117,11 +117,11 @@ You should normally change these values for your own environment:
 
 Example:
 
-    resource_group_name = "rg-aks-dev-001"
+    resource_group_name = "<your-resource-group>"
     location            = "southeastasia"
 
-    vnet_name       = "vnet-aks-dev-001"
-    aks_cluster_name = "aks-dev-001"
+    vnet_name       = "vnet-<your-aks-cluster-name>"
+    aks_cluster_name = "<your-aks-cluster-name>"
 
 ## Location
 

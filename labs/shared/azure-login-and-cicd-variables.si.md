@@ -58,8 +58,8 @@ Output එකෙන් මේ values ගන්න:
 
 Example:
 
-    AZURE_RESOURCE_GROUP = rg-aks-dev-001
-    AKS_CLUSTER_NAME     = aks-dev-001
+    AZURE_RESOURCE_GROUP = <your-resource-group>
+    AKS_CLUSTER_NAME     = <your-aks-cluster-name>
 
 ## Step 4 - Find ACR login server
 
@@ -77,7 +77,7 @@ Output එක use කරන්න:
 
 Example:
 
-    REGISTRY_LOGIN_SERVER = acraksdev001andrew.azurecr.io
+    REGISTRY_LOGIN_SERVER = <your-acr-login-server>
 
 ## Step 5 - Create a service principal
 

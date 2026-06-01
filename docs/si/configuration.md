@@ -117,11 +117,11 @@ terraform.tfvars file එක environment configuration control කරන main fi
 
 Example:
 
-    resource_group_name = "rg-aks-dev-001"
+    resource_group_name = "<your-resource-group>"
     location            = "southeastasia"
 
-    vnet_name        = "vnet-aks-dev-001"
-    aks_cluster_name = "aks-dev-001"
+    vnet_name        = "vnet-<your-aks-cluster-name>"
+    aks_cluster_name = "<your-aks-cluster-name>"
 
 ## Location
 
