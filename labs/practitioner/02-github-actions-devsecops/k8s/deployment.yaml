@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-actions-devsecops-demo
+  namespace: practitioner-github-actions-devsecops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-actions-devsecops-demo
+  template:
+    metadata:
+      labels:
+        app: github-actions-devsecops-demo
+    spec:
+      containers:
+        - name: web
+          image: IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 80
