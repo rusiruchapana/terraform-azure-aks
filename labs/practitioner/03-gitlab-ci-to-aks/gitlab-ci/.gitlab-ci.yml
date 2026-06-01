@@ -29,7 +29,7 @@ build_push:
     - docker:27-dind
   script:
     - docker login "$REGISTRY_LOGIN_SERVER" -u "$REGISTRY_USERNAME" -p "$REGISTRY_PASSWORD"
-    - docker build -t "$REGISTRY_LOGIN_SERVER/$IMAGE_NAME:$CI_COMMIT_SHA" app
+    - docker build --platform linux/amd64 -t "$REGISTRY_LOGIN_SERVER/$IMAGE_NAME:$CI_COMMIT_SHA" app
     - docker push "$REGISTRY_LOGIN_SERVER/$IMAGE_NAME:$CI_COMMIT_SHA"
 
 deploy:
