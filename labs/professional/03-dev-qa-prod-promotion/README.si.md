@@ -156,35 +156,43 @@ Files:
     application-qa.yaml
     application-prod.yaml
 
-## Set lab variables
+## Fork the sample app repository
 
-ඔයාගේ repository URL එක set කරන්න.
+මෙම lab එක වෙනම sample application GitOps repository එකක් use කරනවා:
 
-Argo CD ට read කළ හැකි Git URL එක use කරන්න.
+    https://github.com/andrewferdinandus/aks-gitops-sample-app
 
-Example:
+මෙම repository එක ඔයාගේ GitHub account එකට හෝ organization එකට fork කරන්න.
+
+Example fork URL:
+
+    https://github.com/<your-user-or-org>/aks-gitops-sample-app.git
+
+GitOps source එක විදියට ඔයාගේ fork එක use කරන්න:
 
     REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
-මෙම repository එක current remote එක නම්:
+Fork එකක් use කරන්නේ ඇයි?
 
-    REPO_URL="$(git config --get remote.origin.url)"
+Argo CD desired state read කරන්නේ Git වලින්. මෙම lab එකේදී app එක dev සිට qa හරහා prod වෙත promote කරන්නේ මේ files edit කිරීමෙන්:
+
+    k8s/promotion/dev
+    k8s/promotion/qa
+    k8s/promotion/prod
+
+ඒ changes push කරන්න ඔයාට write access ඕන. Fork එකක් දාගත්තම sample repository එකේ ඔයාගේම copy එකක් ලැබෙනවා.
+
+## Set lab variables
+
+ඔයාගේ sample app repository URL එක set කරන්න.
+
+Sample app repository එකේ ඔයාගේ fork එක use කරන්න:
+
+    REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
 Verify කරන්න:
 
     echo "$REPO_URL"
-
-Application names set කරන්න:
-
-    APP_DEV="promotion-demo-dev"
-    APP_QA="promotion-demo-qa"
-    APP_PROD="promotion-demo-prod"
-
-Namespaces set කරන්න:
-
-    NS_DEV="promotion-dev"
-    NS_QA="promotion-qa"
-    NS_PROD="promotion-prod"
 
 ## Verify starter desired state
 

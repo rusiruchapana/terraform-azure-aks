@@ -156,35 +156,43 @@ Files:
     application-qa.yaml
     application-prod.yaml
 
-## Set lab variables
+## Fork the sample app repository
 
-Set your repository URL.
+This lab uses a separate sample application GitOps repository:
 
-Use the Git URL that Argo CD can read.
+    https://github.com/andrewferdinandus/aks-gitops-sample-app
 
-Example:
+Fork this repository into your own GitHub account or organization.
+
+Example fork URL:
+
+    https://github.com/<your-user-or-org>/aks-gitops-sample-app.git
+
+Use your fork as the GitOps source:
 
     REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
-If this repository is your current remote:
+Why use a fork?
 
-    REPO_URL="$(git config --get remote.origin.url)"
+Argo CD reads desired state from Git. In this lab, you will promote the app from dev to qa to prod by editing files under:
+
+    k8s/promotion/dev
+    k8s/promotion/qa
+    k8s/promotion/prod
+
+You need write access to push those changes. A fork gives you your own copy of the sample repository.
+
+## Set lab variables
+
+Set your sample app repository URL.
+
+Use your fork of the sample app repository:
+
+    REPO_URL="https://github.com/<your-user-or-org>/aks-gitops-sample-app.git"
 
 Verify:
 
     echo "$REPO_URL"
-
-Set application names:
-
-    APP_DEV="promotion-demo-dev"
-    APP_QA="promotion-demo-qa"
-    APP_PROD="promotion-demo-prod"
-
-Set namespaces:
-
-    NS_DEV="promotion-dev"
-    NS_QA="promotion-qa"
-    NS_PROD="promotion-prod"
 
 ## Verify starter desired state
 
