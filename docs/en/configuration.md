@@ -27,12 +27,17 @@ Each environment has the same Terraform structure:
     providers.tf
     backend.tf.example
     terraform.tfvars.example
+    terraform.tfvars.minimal.example
 
 ## Files you should copy
 
 Before running Terraform, copy the example files:
 
     cp backend.tf.example backend.tf
+    # Minimal AKS install
+    cp terraform.tfvars.minimal.example terraform.tfvars
+
+    # Or full learning platform example
     cp terraform.tfvars.example terraform.tfvars
 
 Why?

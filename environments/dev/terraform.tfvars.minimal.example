@@ -1,4 +1,4 @@
-resource_group_name = "rg-aks-dev-example"
+resource_group_name = "rg-aks-dev-minimal"
 location            = "southeastasia"
 
 tags = {
@@ -7,20 +7,20 @@ tags = {
   managed_by  = "terraform"
 }
 
-vnet_name                   = "vnet-aks-dev-example"
+vnet_name                   = "vnet-aks-dev-minimal"
 vnet_address_space          = ["10.10.0.0/16"]
-aks_subnet_name             = "snet-aks-dev-example"
+aks_subnet_name             = "snet-aks-dev-minimal"
 aks_subnet_address_prefixes = ["10.10.1.0/24"]
 
 enable_nat_gateway                  = true
-nat_gateway_name                    = "ngw-aks-dev-example"
-nat_gateway_public_ip_name          = "pip-ngw-aks-dev-example"
+nat_gateway_name                    = "ngw-aks-dev-minimal"
+nat_gateway_public_ip_name          = "pip-ngw-aks-dev-minimal"
 nat_gateway_idle_timeout_in_minutes = 4
 
-aks_identity_name = "id-aks-dev-example"
+aks_identity_name = "id-aks-dev-minimal"
 
-aks_cluster_name            = "aks-dev-example"
-aks_dns_prefix              = "aks-dev-example"
+aks_cluster_name            = "aks-dev-minimal"
+aks_dns_prefix              = "aks-dev-minimal"
 aks_kubernetes_version      = null
 aks_private_cluster_enabled = false
 
@@ -43,16 +43,14 @@ user_node_labels = {
   pool     = "user"
 }
 
-# Optional Azure Container Registry.
-# Set to false for minimal AKS.
-enable_acr        = true
+# Minimal install: no Azure Container Registry.
+enable_acr        = false
 acr_name          = "replacewithuniquedevacr001"
 acr_sku           = "Basic"
 acr_admin_enabled = false
 
-# Optional Azure Key Vault.
-# Set to false for minimal AKS.
-enable_keyvault = true
+# Minimal install: no Azure Key Vault.
+enable_keyvault = false
 keyvault_name   = "replace-with-unique-dev-kv"
 
 keyvault_sku_name                      = "standard"
@@ -60,16 +58,14 @@ keyvault_soft_delete_retention_days    = 7
 keyvault_purge_protection_enabled      = false
 keyvault_public_network_access_enabled = true
 
-# Optional AKS Workload Identity / OIDC.
-# Required for Azure-native pod identity patterns such as Key Vault access.
-aks_oidc_issuer_enabled       = true
-aks_workload_identity_enabled = true
+# Minimal install: Workload Identity disabled.
+aks_oidc_issuer_enabled       = false
+aks_workload_identity_enabled = false
 
-# Optional app-specific managed identity and Key Vault access.
-# Keep false unless you want Terraform to create the demo app identity and Key Vault permissions.
+# Minimal install: no app-specific Key Vault identity.
 enable_workload_identity_keyvault_access = false
 
-app_workload_identity_name             = "id-kv-reader-dev-example"
+app_workload_identity_name             = "id-kv-reader-dev-minimal"
 app_workload_namespace                 = "app-secrets-demo"
 app_workload_service_account_name      = "kv-reader-sa"
 app_federated_identity_credential_name = "fic-kv-reader"

@@ -58,6 +58,10 @@ Go to the dev environment:
 Create local backend and variable files from examples:
 
     cp backend.tf.example backend.tf
+    # Minimal AKS install
+    cp terraform.tfvars.minimal.example terraform.tfvars
+
+    # Or full learning platform example
     cp terraform.tfvars.example terraform.tfvars
 
 Edit these files for your Azure subscription and naming requirements:

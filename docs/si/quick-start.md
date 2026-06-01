@@ -58,6 +58,10 @@ Dev environment එකට යන්න:
 Example files වලින් local backend සහ variable files හදන්න:
 
     cp backend.tf.example backend.tf
+    # Minimal AKS install
+    cp terraform.tfvars.minimal.example terraform.tfvars
+
+    # නැත්නම් full learning platform example
     cp terraform.tfvars.example terraform.tfvars
 
 ඔයාගේ Azure subscription එකට සහ naming requirements වලට ගැලපෙන විදියට මේ files edit කරන්න:

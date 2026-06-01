@@ -27,12 +27,17 @@ Each environment එකේ මේ Terraform files තියෙනවා:
     providers.tf
     backend.tf.example
     terraform.tfvars.example
+    terraform.tfvars.minimal.example
 
 ## Copy කරන්න ඕන files
 
 Terraform run කරන්න කලින් example files copy කරන්න:
 
     cp backend.tf.example backend.tf
+    # Minimal AKS install
+    cp terraform.tfvars.minimal.example terraform.tfvars
+
+    # නැත්නම් full learning platform example
     cp terraform.tfvars.example terraform.tfvars
 
 ඇයි?
