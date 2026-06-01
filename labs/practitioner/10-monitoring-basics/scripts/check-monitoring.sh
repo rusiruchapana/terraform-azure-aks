@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RESOURCE_GROUP="${RESOURCE_GROUP:-rg-aks-dev-001}"
-AKS_NAME="${AKS_NAME:-aks-dev-001}"
+: "${RESOURCE_GROUP:?Set RESOURCE_GROUP}"
+: "${AKS_NAME:?Set AKS_NAME}"
+
 MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring}"
 
 echo "== AKS cluster =="
@@ -23,6 +24,10 @@ kubectl get nodes -o wide
 echo
 echo "== Node metrics =="
 kubectl top nodes || true
+
+echo
+echo "== Pod metrics =="
+kubectl top pods --all-namespaces || true
 
 echo
 echo "== kube-system pods =="

@@ -2,17 +2,36 @@
 
 This lab shows how to inspect basic monitoring and observability signals in an AKS cluster.
 
-The lab focuses on practical checks that every AKS operator should know:
+This is a standalone AKS operations lab.
+
+This lab does not deploy a new application by default.
+
+The default lab path focuses on read-only monitoring checks:
 
 - Node and pod metrics
+- metrics-server status
 - System pod health
 - Kubernetes events
 - In-cluster Prometheus and Grafana discovery
 - Azure Monitor / Container Insights status
-- Optional setup steps if monitoring is not already installed
-- Cleanup steps
 
-This lab does not require a new application deployment.
+Optional sections show how to install in-cluster monitoring or enable Azure Monitor if those features are missing.
+
+## Lab goal
+
+By the end of this lab, you should be able to:
+
+- Verify AKS cluster access
+- Check node and pod metrics with `kubectl top`
+- Confirm whether metrics-server is working
+- Inspect kube-system pod health
+- Inspect recent Kubernetes events
+- Check whether Prometheus and Grafana are installed in the cluster
+- Access Grafana locally with `kubectl port-forward`
+- Access Prometheus locally with `kubectl port-forward`
+- Check whether Azure Monitor / Container Insights is enabled
+- Run a helper script that collects common monitoring checks
+- Clean up only the optional monitoring resources that you installed during this lab
 
 ## What you will learn
 
@@ -28,9 +47,9 @@ You will learn:
 - How to access Prometheus locally with port-forward
 - How to check whether Azure Monitor / Container Insights is enabled
 - How to install in-cluster monitoring if it is missing
-- How to clean up optional monitoring resources
+- How to avoid deleting monitoring resources that were not created by this lab
 
-## Architecture
+## Lab architecture
 
 This lab covers two common monitoring approaches.
 
@@ -76,18 +95,118 @@ You need:
 - Azure CLI
 - kubectl
 - Helm
+- A terminal
+- A web browser
 - Existing AKS cluster
 - Access to the AKS cluster
 - Permission to list AKS cluster details
 - Optional permission to install Helm charts
 - Optional permission to enable Azure Monitor addon
 
-Check Azure and Kubernetes access:
+This lab does not require:
+
+- Docker Desktop
+- A container registry
+- A CI/CD platform
+- A new application deployment
+
+## Install required local tools
+
+### Azure CLI
+
+Install Azure CLI:
+
+    https://learn.microsoft.com/cli/azure/install-azure-cli
+
+Verify Azure CLI:
+
+    az version
+
+Login to Azure:
+
+    az login
+
+Verify the active account:
 
     az account show --query "{subscriptionId:id, tenantId:tenantId}" -o table
+
+### kubectl
+
+Install kubectl:
+
+    https://kubernetes.io/docs/tasks/tools/
+
+Verify kubectl:
+
+    kubectl version --client
+
+### Helm
+
+Install Helm:
+
+    https://helm.sh/docs/intro/install/
+
+Verify Helm:
+
+    helm version
+
+## Check local tools and Azure access
+
+Before continuing, verify:
+
+    az account show --query "{subscriptionId:id, tenantId:tenantId}" -o table
+    kubectl version --client
+    helm version
+
+Set your AKS values:
+
+    RESOURCE_GROUP="<your-resource-group>"
+    AKS_NAME="<your-aks-cluster-name>"
+
+Get AKS credentials:
+
+    az aks get-credentials \
+      --resource-group "$RESOURCE_GROUP" \
+      --name "$AKS_NAME" \
+      --overwrite-existing
+
+Verify AKS access:
+
     kubectl get nodes
 
-## Lab files
+## Find your Azure values
+
+Use these commands to find your resource group, AKS cluster, and location.
+
+List resource groups:
+
+    az group list --query "[].{name:name, location:location}" -o table
+
+List AKS clusters:
+
+    az aks list --query "[].{name:name, resourceGroup:resourceGroup, location:location}" -o table
+
+Set your values:
+
+    RESOURCE_GROUP="<your-resource-group>"
+    AKS_NAME="<your-aks-cluster-name>"
+    LOCATION="<your-azure-region>"
+
+Example location format:
+
+    southeastasia
+
+Verify:
+
+    echo "$RESOURCE_GROUP"
+    echo "$AKS_NAME"
+    echo "$LOCATION"
+
+Do not copy values from another environment.
+
+Use values from your own Azure subscription.
+
+## Files in this lab
 
 This lab includes:
 
@@ -102,11 +221,19 @@ Files:
 
 Set these values for your environment:
 
-    RESOURCE_GROUP="rg-aks-dev-001"
-    AKS_NAME="aks-dev-001"
-    LOCATION="southeastasia"
+    RESOURCE_GROUP="<your-resource-group>"
+    AKS_NAME="<your-aks-cluster-name>"
+    LOCATION="<your-azure-region>"
     MONITORING_NAMESPACE="monitoring"
     PROMETHEUS_RELEASE="kube-prometheus-stack"
+
+Verify:
+
+    echo "$RESOURCE_GROUP"
+    echo "$AKS_NAME"
+    echo "$LOCATION"
+    echo "$MONITORING_NAMESPACE"
+    echo "$PROMETHEUS_RELEASE"
 
 ## Verify AKS cluster access
 
@@ -205,9 +332,13 @@ Check Helm releases:
 
 If you see a `kube-prometheus-stack` release, Prometheus, Grafana, Alertmanager, kube-state-metrics, and node-exporter are usually installed.
 
+If the namespace does not exist, that only means this in-cluster monitoring stack is not installed in that namespace.
+
 ## If missing: install kube-prometheus-stack
 
-If the monitoring namespace or Helm release does not exist, install kube-prometheus-stack.
+Only install this stack if you want in-cluster Prometheus and Grafana for this lab.
+
+If your cluster already has a monitoring stack managed by someone else, do not replace it.
 
 Add the Helm repo:
 
@@ -296,7 +427,9 @@ Check the Azure Monitor addon status:
 
 If the output is empty or null, the Azure Monitor addon is not enabled.
 
-This does not mean the cluster has no monitoring. It only means Azure-native Container Insights is not enabled through the AKS addon.
+This does not mean the cluster has no monitoring.
+
+It only means Azure-native Container Insights is not enabled through the AKS addon.
 
 ## Optional: enable Azure Monitor / Container Insights
 
@@ -328,7 +461,16 @@ List Log Analytics workspaces in the resource group:
 
 ## Run the helper script
 
-You can run the helper script to collect common monitoring checks:
+The helper script requires these variables:
+
+    RESOURCE_GROUP
+    AKS_NAME
+
+Optional variable:
+
+    MONITORING_NAMESPACE
+
+Run the helper script from the repository root:
 
     ./labs/practitioner/10-monitoring-basics/scripts/check-monitoring.sh
 
@@ -338,33 +480,36 @@ The script checks:
 - Current Kubernetes context
 - Nodes
 - Node metrics
+- Pod metrics
 - kube-system pods
 - metrics-server
-- Recent events
+- Recent Kubernetes events
 - Azure Monitor addon status
-- Monitoring namespace
-- Monitoring pods
-- Monitoring services
-- Helm releases
+- In-cluster monitoring namespace
+- In-cluster monitoring pods
+- In-cluster monitoring services
+- Helm releases in the monitoring namespace
 
 ## Cleanup
+
+Only remove resources that you installed or enabled during this lab.
 
 If you installed kube-prometheus-stack only for this lab and do not need it anymore, remove it:
 
     helm uninstall "$PROMETHEUS_RELEASE" -n "$MONITORING_NAMESPACE"
 
-Delete the monitoring namespace:
+Delete the monitoring namespace only if you created it for this lab:
 
     kubectl delete namespace "$MONITORING_NAMESPACE" --ignore-not-found
 
-If you enabled Azure Monitor / Container Insights only for this lab and want to disable it:
+Disable Azure Monitor only if you enabled it for this lab and you no longer need it:
 
     az aks disable-addons \
       --resource-group "$RESOURCE_GROUP" \
       --name "$AKS_NAME" \
       --addons monitoring
 
-Check addon status again:
+Verify Azure Monitor addon status:
 
     az aks show \
       --resource-group "$RESOURCE_GROUP" \
@@ -372,24 +517,27 @@ Check addon status again:
       --query "addonProfiles.omsagent" \
       --output json
 
-If another lab depends on the monitoring stack, keep it.
+Do not remove shared monitoring resources that were created outside this lab.
 
 ## What you completed
 
-You checked:
+You inspected:
 
 - AKS cluster health
-- Node readiness
-- Node and pod metrics
+- Kubernetes node and pod metrics
 - metrics-server status
 - kube-system health
-- Kubernetes events
+- Recent Kubernetes events
 - In-cluster monitoring status
 - Grafana local access
 - Prometheus local access
-- Azure Monitor addon status
+- Azure Monitor / Container Insights status
 - Optional enable and cleanup paths
 
-This prepares the cluster for the next practitioner lab:
+## Important note
 
-    Practitioner Lab 11 - OpenTelemetry App
+This is a learning lab.
+
+Monitoring setups are often shared across teams and clusters.
+
+Only install or remove monitoring components when you understand who owns them and what depends on them.
