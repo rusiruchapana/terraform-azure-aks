@@ -1,0 +1,637 @@
+# Professional Lab 03 - dev to qa to prod promotion
+
+මෙම lab එකෙන් Argo CD use කරලා application desired state එක dev සිට qa හරහා prod වෙත promote කරන ආකාරය ඉගෙන ගන්නවා.
+
+මෙය professional GitOps lab එකක්.
+
+Goal එක direct `kubectl apply` කිරීම නෙවෙයි. Goal එක Git හරහා environment promotion තේරුම් ගැනීමයි.
+
+Flow එක:
+
+    Git repository
+      |
+      v
+    Argo CD Applications
+      |
+      +--> promotion-demo-dev
+      +--> promotion-demo-qa
+      +--> promotion-demo-prod
+      |
+      v
+    AKS namespaces
+      |
+      +--> promotion-dev
+      +--> promotion-qa
+      +--> promotion-prod
+
+## Lab goal
+
+මෙම lab එක අවසානයේ ඔයාට මේවා තිබිය යුතුයි:
+
+- dev, qa, prod සඳහා GitOps desired-state folders තුනක්
+- Argo CD Applications තුනක්
+- AKS namespaces තුනක්
+- එක් එක් environment එකේ running demo app එකක්
+- dev v1 සිට v2 වෙත promote වීම
+- qa v1 සිට v2 වෙත promote වීම
+- prod v1 සිට v2 වෙත promote වීම
+- Argo CD UI එකෙන් environments බලන්න හැකියාව
+- Argo CD self-heal tested වීම
+
+## What you will learn
+
+මෙම lab එකෙන් ඔබට මේවා ඉගෙන ගන්න පුළුවන්:
+
+- GitOps promotion වැඩ කරන ආකාරය
+- dev, qa, prod desired state වෙන වෙනම තබන ආකාරය
+- Argo CD applications කිහිපයක් track කරන ආකාරය
+- Change එකක් environment by environment promote කරන ආකාරය
+- GitOps වල local file changes පමණක් ප්‍රමාණවත් නැත්තේ ඇයි
+- Argo CD sync සහ self-heal වැඩ කරන ආකාරය
+- kubectl සහ browser access හරහා promotion verify කරන ආකාරය
+- Promotion lab cleanup කරන ආකාරය
+
+## Architecture
+
+මෙම lab එක GitOps source එක ලෙස මෙම repository එක use කරනවා.
+
+Desired state තියෙන්නේ:
+
+    gitops/apps/dev/promotion-demo
+    gitops/apps/qa/promotion-demo
+    gitops/apps/prod/promotion-demo
+
+Argo CD Application manifests තියෙන්නේ:
+
+    labs/professional/03-dev-qa-prod-promotion/argocd
+
+එක් එක් Argo CD Application එක environment path එකකට point කරනවා:
+
+    promotion-demo-dev  -> gitops/apps/dev/promotion-demo
+    promotion-demo-qa   -> gitops/apps/qa/promotion-demo
+    promotion-demo-prod -> gitops/apps/prod/promotion-demo
+
+එක් එක් environment එක deploy කරන්නේ:
+
+- Namespace
+- ConfigMap
+- Deployment
+- Service
+
+App එක ConfigMap එකකින් environment-specific HTML page serve කරන simple NGINX workload එකක්.
+
+## What this lab requires
+
+ඔයාට මේවා අවශ්‍යයි:
+
+- kubectl
+- Git
+- Existing AKS cluster access
+- Existing Argo CD installation
+- Argo CD UI access
+- Argo CD ට read කළ හැකි Git URL එකක්
+
+මෙම lab එකට අවශ්‍ය නැහැ:
+
+- Docker Desktop
+- Azure Container Registry
+- CI/CD pipeline
+- Flux
+
+## Install required local tools
+
+### kubectl
+
+kubectl verify කරන්න:
+
+    kubectl version --client
+
+### Git
+
+Git verify කරන්න:
+
+    git --version
+
+## Check local tools and AKS access
+
+AKS access verify කරන්න:
+
+    kubectl get nodes
+
+Current context check කරන්න:
+
+    kubectl config current-context
+
+Argo CD namespace verify කරන්න:
+
+    kubectl get ns argocd
+
+Argo CD pods verify කරන්න:
+
+    kubectl get pods -n argocd
+
+Argo CD Application CRD verify කරන්න:
+
+    kubectl get crd applications.argoproj.io
+
+## Lab files
+
+මෙම lab එක use කරන files:
+
+    gitops/apps/dev/promotion-demo/
+    gitops/apps/qa/promotion-demo/
+    gitops/apps/prod/promotion-demo/
+
+    labs/professional/03-dev-qa-prod-promotion/argocd/
+
+Files:
+
+    namespace.yaml
+    configmap.yaml
+    deployment.yaml
+    service.yaml
+    kustomization.yaml
+
+    application-dev.yaml
+    application-qa.yaml
+    application-prod.yaml
+
+## Set lab variables
+
+ඔයාගේ repository URL එක set කරන්න.
+
+Argo CD ට read කළ හැකි Git URL එක use කරන්න.
+
+Example:
+
+    REPO_URL="https://github.com/<your-user-or-org>/<your-repo>.git"
+
+මෙම repository එක current remote එක නම්:
+
+    REPO_URL="$(git config --get remote.origin.url)"
+
+Verify කරන්න:
+
+    echo "$REPO_URL"
+
+Application names set කරන්න:
+
+    APP_DEV="promotion-demo-dev"
+    APP_QA="promotion-demo-qa"
+    APP_PROD="promotion-demo-prod"
+
+Namespaces set කරන්න:
+
+    NS_DEV="promotion-dev"
+    NS_QA="promotion-qa"
+    NS_PROD="promotion-prod"
+
+## Verify starter desired state
+
+Starter version values check කරන්න:
+
+    grep -RInE 'Environment:|Version:' \
+      gitops/apps/dev/promotion-demo/configmap.yaml \
+      gitops/apps/qa/promotion-demo/configmap.yaml \
+      gitops/apps/prod/promotion-demo/configmap.yaml
+
+Expected starter state:
+
+    dev  = v1
+    qa   = v1
+    prod = v1
+
+## Commit and publish desired state
+
+Argo CD Git වලින් read කරනවා.
+
+Local files පමණක් ප්‍රමාණවත් නැහැ.
+
+Argo CD Applications apply කරන්න කලින් desired-state files commit කරලා `REPO_URL` එකෙන් configured Git repository එකේ available වෙන්න ඕන.
+
+Status check කරන්න:
+
+    git status --short
+
+අවශ්‍ය නම් commit කරන්න:
+
+    git add gitops/apps labs/professional/03-dev-qa-prod-promotion
+    git commit -m "Add Argo CD promotion demo desired state"
+    git push
+
+## Create Argo CD Applications
+
+dev Application apply කරන්න:
+
+    sed "s|REPO_URL_PLACEHOLDER|$REPO_URL|g" \
+      labs/professional/03-dev-qa-prod-promotion/argocd/application-dev.yaml \
+      | kubectl apply -f -
+
+qa Application apply කරන්න:
+
+    sed "s|REPO_URL_PLACEHOLDER|$REPO_URL|g" \
+      labs/professional/03-dev-qa-prod-promotion/argocd/application-qa.yaml \
+      | kubectl apply -f -
+
+prod Application apply කරන්න:
+
+    sed "s|REPO_URL_PLACEHOLDER|$REPO_URL|g" \
+      labs/professional/03-dev-qa-prod-promotion/argocd/application-prod.yaml \
+      | kubectl apply -f -
+
+Verify කරන්න:
+
+    kubectl get applications -n argocd
+
+Expected:
+
+    promotion-demo-dev    Synced    Healthy
+    promotion-demo-qa     Synced    Healthy
+    promotion-demo-prod   Synced    Healthy
+
+## Verify Kubernetes resources
+
+Namespaces check කරන්න:
+
+    kubectl get ns promotion-dev promotion-qa promotion-prod
+
+Pods check කරන්න:
+
+    kubectl get pods -n promotion-dev
+    kubectl get pods -n promotion-qa
+    kubectl get pods -n promotion-prod
+
+Services check කරන්න:
+
+    kubectl get svc -n promotion-dev
+    kubectl get svc -n promotion-qa
+    kubectl get svc -n promotion-prod
+
+Expected:
+
+- dev namespace එකේ pod 1ක්
+- qa namespace එකේ pods 2ක්
+- prod namespace එකේ pods 2ක්
+- එක් එක් namespace එකේ `promotion-demo` ClusterIP service එකක්
+
+## Access Argo CD UI
+
+Argo CD port-forward කරන්න:
+
+    kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+Open කරන්න:
+
+    https://localhost:8080
+
+Username:
+
+    admin
+
+Initial admin password අවශ්‍ය නම් ගන්න:
+
+    kubectl -n argocd get secret argocd-initial-admin-secret \
+      -o jsonpath="{.data.password}" | base64 -d
+    echo
+
+UI එකේ මේ Applications පේනවද verify කරන්න:
+
+- promotion-demo-dev
+- promotion-demo-qa
+- promotion-demo-prod
+
+මෙම lab එකට Argo CD public expose කරන්න එපා.
+
+Port-forward use කරන්නේ local learning සඳහා safer සහ simpler නිසා.
+
+## Verify app pages
+
+dev port-forward කරන්න:
+
+    kubectl port-forward svc/promotion-demo -n promotion-dev 8081:80
+
+Open කරන්න:
+
+    http://localhost:8081
+
+Expected:
+
+    Environment: dev
+    Version: v1
+
+qa port-forward කරන්න:
+
+    kubectl port-forward svc/promotion-demo -n promotion-qa 8082:80
+
+Open කරන්න:
+
+    http://localhost:8082
+
+Expected:
+
+    Environment: qa
+    Version: v1
+
+prod port-forward කරන්න:
+
+    kubectl port-forward svc/promotion-demo -n promotion-prod 8083:80
+
+Open කරන්න:
+
+    http://localhost:8083
+
+Expected:
+
+    Environment: prod
+    Version: v1
+
+Browser එක old content පෙන්වනවා නම්, port-forward restart කරලා browser hard refresh කරන්න.
+
+## Promote dev to v2
+
+dev ConfigMap එකේ HTML version line එක පමණක් update කරන්න.
+
+Broad sed replacement use කරන්න එපා. එහෙම කළොත් `apiVersion: v1` වැරදිලා වෙනස් වෙන්න පුළුවන්.
+
+Safe edit එක:
+
+    python3 - <<'PY'
+from pathlib import Path
+
+p = Path("gitops/apps/dev/promotion-demo/configmap.yaml")
+text = p.read_text()
+text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
+p.write_text(text)
+PY
+
+Verify කරන්න:
+
+    grep -nE 'apiVersion|Environment:|Version:' \
+      gitops/apps/dev/promotion-demo/configmap.yaml
+
+Commit සහ push කරන්න:
+
+    git add gitops/apps/dev/promotion-demo/configmap.yaml
+    git commit -m "Promote demo dev environment to v2"
+    git push
+
+dev Application refresh කරන්න:
+
+    kubectl annotate application promotion-demo-dev -n argocd \
+      argocd.argoproj.io/refresh=hard --overwrite
+
+Verify කරන්න:
+
+    kubectl get applications -n argocd
+
+dev ConfigMap check කරන්න:
+
+    kubectl get configmap promotion-demo-content -n promotion-dev \
+      -o jsonpath='{.data.index\.html}'
+    echo
+
+Expected:
+
+    Environment: dev
+    Version: v2
+
+මෙම අවස්ථාවේදී:
+
+    dev  = v2
+    qa   = v1
+    prod = v1
+
+## Promote qa to v2
+
+qa ConfigMap එකේ HTML version line එක පමණක් update කරන්න:
+
+    python3 - <<'PY'
+from pathlib import Path
+
+p = Path("gitops/apps/qa/promotion-demo/configmap.yaml")
+text = p.read_text()
+text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
+p.write_text(text)
+PY
+
+Verify කරන්න:
+
+    grep -nE 'apiVersion|Environment:|Version:' \
+      gitops/apps/qa/promotion-demo/configmap.yaml
+
+Commit සහ push කරන්න:
+
+    git add gitops/apps/qa/promotion-demo/configmap.yaml
+    git commit -m "Promote demo qa environment to v2"
+    git push
+
+qa Application refresh කරන්න:
+
+    kubectl annotate application promotion-demo-qa -n argocd \
+      argocd.argoproj.io/refresh=hard --overwrite
+
+qa verify කරන්න:
+
+    kubectl get configmap promotion-demo-content -n promotion-qa \
+      -o jsonpath='{.data.index\.html}'
+    echo
+
+prod තවම v1 ද verify කරන්න:
+
+    kubectl get configmap promotion-demo-content -n promotion-prod \
+      -o jsonpath='{.data.index\.html}'
+    echo
+
+මෙම අවස්ථාවේදී:
+
+    dev  = v2
+    qa   = v2
+    prod = v1
+
+## Promote prod to v2
+
+prod ConfigMap එකේ HTML version line එක පමණක් update කරන්න:
+
+    python3 - <<'PY'
+from pathlib import Path
+
+p = Path("gitops/apps/prod/promotion-demo/configmap.yaml")
+text = p.read_text()
+text = text.replace("<p>Version: v1</p>", "<p>Version: v2</p>")
+p.write_text(text)
+PY
+
+Verify කරන්න:
+
+    grep -nE 'apiVersion|Environment:|Version:' \
+      gitops/apps/prod/promotion-demo/configmap.yaml
+
+Commit සහ push කරන්න:
+
+    git add gitops/apps/prod/promotion-demo/configmap.yaml
+    git commit -m "Promote demo prod environment to v2"
+    git push
+
+prod Application refresh කරන්න:
+
+    kubectl annotate application promotion-demo-prod -n argocd \
+      argocd.argoproj.io/refresh=hard --overwrite
+
+Final state verify කරන්න:
+
+    kubectl get applications -n argocd
+
+    kubectl get configmap promotion-demo-content -n promotion-dev \
+      -o jsonpath='{.data.index\.html}'
+    echo
+
+    kubectl get configmap promotion-demo-content -n promotion-qa \
+      -o jsonpath='{.data.index\.html}'
+    echo
+
+    kubectl get configmap promotion-demo-content -n promotion-prod \
+      -o jsonpath='{.data.index\.html}'
+    echo
+
+Expected final state:
+
+    dev  = v2
+    qa   = v2
+    prod = v2
+
+## Test self-heal
+
+Prod desired state එකේ replicas 2යි.
+
+Prod replicas manually change කරන්න:
+
+    kubectl scale deployment promotion-demo -n promotion-prod --replicas=1
+
+Check කරන්න:
+
+    kubectl get deployment promotion-demo -n promotion-prod
+
+තත්පර 30 සිට 60 දක්වා wait කරලා නැවත check කරන්න:
+
+    kubectl get deployment promotion-demo -n promotion-prod
+    kubectl get applications -n argocd
+
+Expected:
+
+    promotion-demo නැවත replicas 2ට එන්න ඕන
+    promotion-demo-prod Synced සහ Healthy වෙන්න ඕන
+
+මේකෙන් Argo CD self-heal manual drift correct කළා කියලා prove වෙනවා.
+
+## Troubleshooting
+
+### Application is OutOfSync
+
+Application refresh කරන්න:
+
+    kubectl annotate application promotion-demo-dev -n argocd \
+      argocd.argoproj.io/refresh=hard --overwrite
+
+නැත්නම් Argo CD UI එකෙන්:
+
+    Application -> SYNC -> SYNCHRONIZE
+
+### Argo CD cannot find the repo path
+
+Application manifest එකේ path check කරන්න:
+
+    gitops/apps/dev/promotion-demo
+    gitops/apps/qa/promotion-demo
+    gitops/apps/prod/promotion-demo
+
+Files commit කරලා `REPO_URL` එකෙන් configured Git repository එකේ available ද verify කරන්න.
+
+### Browser shows old version
+
+Port-forward restart කරන්න.
+
+Browser hard refresh කරන්න.
+
+Kubernetes වලින් direct verify කරන්න:
+
+    kubectl get configmap promotion-demo-content -n promotion-dev \
+      -o jsonpath='{.data.index\.html}'
+    echo
+
+### ConfigMap apiVersion error
+
+මේ වගේ error එකක් ආවොත්:
+
+    The Kubernetes API could not find version "v2" of /ConfigMap
+
+ඔයා වැරදිලා මේක වෙනස් කරලා:
+
+    apiVersion: v1
+
+මේකට:
+
+    apiVersion accidentally changed to the wrong value
+
+ඒක නැවත fix කරන්න:
+
+    apiVersion: v1
+
+HTML line එක පමණක් change කරන්න:
+
+    <p>Version: v1</p>
+
+## Cleanup
+
+Argo CD Applications delete කරන්න:
+
+    kubectl delete application promotion-demo-dev -n argocd --ignore-not-found
+    kubectl delete application promotion-demo-qa -n argocd --ignore-not-found
+    kubectl delete application promotion-demo-prod -n argocd --ignore-not-found
+
+Promotion namespaces delete කරන්න:
+
+    kubectl delete namespace promotion-dev --ignore-not-found
+    kubectl delete namespace promotion-qa --ignore-not-found
+    kubectl delete namespace promotion-prod --ignore-not-found
+
+Verify කරන්න:
+
+    kubectl get applications -n argocd
+    kubectl get ns promotion-dev promotion-qa promotion-prod 2>/dev/null || echo "promotion namespaces removed"
+
+මෙම cleanup එක Argo CD remove කරන්නේ නැහැ.
+
+## What you completed
+
+ඔයා complete කළා:
+
+- dev, qa, prod desired-state structure
+- Argo CD Applications තුනක්
+- dev සිට qa හරහා prod promotion
+- Argo CD UI verification
+- Browser verification
+- Git-driven environment promotion
+- Argo CD self-heal test
+- Cleanup
+
+මෙය next lab එකට prepare කරනවා:
+
+    Professional Lab 04 - Blue/Green Deployment
+
+## Important note
+
+මෙම lab එක promotion pattern එකක්.
+
+වැදගත් දේ sample NGINX app එක නෙවෙයි.
+
+වැදගත් concept එක:
+
+    Git desired state
+      |
+      v
+    Argo CD sync
+      |
+      v
+    Environment-specific cluster state
+
+Real production use සඳහා මෙම pattern එක pull requests, approvals, security checks, monitoring, rollback plans, සහ change management සමඟ combine කරන්න.

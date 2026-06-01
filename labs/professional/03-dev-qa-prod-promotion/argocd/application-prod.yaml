@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/andrewferdinandus/terraform-azure-aks.git
+    repoURL: REPO_URL_PLACEHOLDER
     targetRevision: main
     path: gitops/apps/prod/promotion-demo
   destination:
