@@ -166,17 +166,103 @@ Before starting this lab, you need:
 - Option A: access to the author-tested public image
 - Option B: your own Docker Hub account and fork of the sample repo
 
-This lab uses the existing Azure OpenAI deployment:
-
-```text
-Resource group: <your-aiops-resource-group>
-Azure OpenAI account: <your-azure-openai-account>
-Deployment: <your-azure-openai-deployment>
-Model: gpt-4.1-nano or another supported chat model
-API version: 2024-10-21
-```
+You will create your own Azure OpenAI resource and model deployment in your own Azure subscription.
 
 The real Azure OpenAI key must not be committed to Git.
+
+## Create Azure OpenAI
+
+Create the Azure OpenAI resource in your own Azure subscription.
+
+Set the Azure variables.
+
+```bash
+export AIOPS_OPENAI_RESOURCE_GROUP="rg-aks-aiops-lab"
+export AIOPS_OPENAI_LOCATION="eastus"
+export AIOPS_OPENAI_ACCOUNT="aiops-openai-$RANDOM"
+export AZURE_OPENAI_DEPLOYMENT="gpt-4-1-nano"
+export AZURE_OPENAI_MODEL_NAME="gpt-4.1-nano"
+export AZURE_OPENAI_MODEL_VERSION="2025-04-14"
+export AZURE_OPENAI_API_VERSION="2024-10-21"
+```
+
+Create the resource group.
+
+```bash
+az group create \
+  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --location "$AIOPS_OPENAI_LOCATION"
+```
+
+Create the Azure OpenAI account.
+
+```bash
+az cognitiveservices account create \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --location "$AIOPS_OPENAI_LOCATION" \
+  --kind OpenAI \
+  --sku S0 \
+  --yes
+```
+
+Create the model deployment.
+
+```bash
+az cognitiveservices account deployment create \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --deployment-name "$AZURE_OPENAI_DEPLOYMENT" \
+  --model-name "$AZURE_OPENAI_MODEL_NAME" \
+  --model-version "$AZURE_OPENAI_MODEL_VERSION" \
+  --model-format OpenAI \
+  --sku-name GlobalStandard \
+  --sku-capacity 1
+```
+
+Get the endpoint and key.
+
+```bash
+export AZURE_OPENAI_ENDPOINT="$(az cognitiveservices account show \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --query properties.endpoint -o tsv)"
+
+export AZURE_OPENAI_KEY="$(az cognitiveservices account keys list \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --query key1 -o tsv)"
+```
+
+Verify the values.
+
+```bash
+echo "$AZURE_OPENAI_API_VERSION"
+```
+
+Test Azure OpenAI before deploying the controller.
+
+```bash
+curl -s "$AZURE_OPENAI_ENDPOINT/openai/deployments/$AZURE_OPENAI_DEPLOYMENT/chat/completions?api-version=$AZURE_OPENAI_API_VERSION" \
+  -H "Content-Type: application/json" \
+  -H "api-key: $AZURE_OPENAI_KEY" \
+  -d '{
+    "messages": [
+      {
+        "role": "system",
+        "content": "Return concise JSON only."
+      },
+      {
+        "role": "user",
+        "content": "Return {\"status\":\"ok\"}"
+      }
+    ],
+    "temperature": 0,
+    "max_tokens": 50
+  }'
+```
+
+If the model or version is not available in your selected region, choose another region or another supported chat model deployment that is available in your Azure subscription.
 
 ## Set lab variables
 
@@ -190,10 +276,6 @@ export AIOPS_NAMESPACE="aiops-system"
 export WATCH_NAMESPACE="incident-demo"
 export AIOPS_REPORT_CONFIGMAP="aiops-latest-incident-report"
 
-export AZURE_OPENAI_ENDPOINT="<your-azure-openai-endpoint>"
-export AZURE_OPENAI_DEPLOYMENT="<your-azure-openai-deployment>"
-export AZURE_OPENAI_API_VERSION="2024-10-21"
-
 export DOCKERHUB_USER="<your-dockerhub-username>"
 export AIOPS_IMAGE="docker.io/$DOCKERHUB_USER/aiops-controller:0.1.0"
 
@@ -204,8 +286,6 @@ export SAMPLE_REPO_FORK_URL="https://github.com/$GITHUB_USER/aks-gitops-sample-a
 Verify:
 
 ```bash
-echo "$AZURE_OPENAI_ENDPOINT"
-echo "$AZURE_OPENAI_DEPLOYMENT"
 echo "$AIOPS_IMAGE"
 echo "$SAMPLE_REPO_FORK_URL"
 ```

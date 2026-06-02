@@ -166,17 +166,103 @@ Option B Argo CD සමඟ භාවිතා කරනවා නම්, sample 
 - Option A: author-tested public image එක pull කිරීමට access
 - Option B: ඔබගේ Docker Hub account එක සහ sample repo fork එකක්
 
-මෙම lab එක existing Azure OpenAI deployment එක භාවිතා කරයි:
-
-```text
-Resource group: <your-aiops-resource-group>
-Azure OpenAI account: <your-azure-openai-account>
-Deployment: <your-azure-openai-deployment>
-Model: gpt-4.1-nano or another supported chat model
-API version: 2024-10-21
-```
+මෙම lab එකේදී ඔබගේ Azure subscription එක තුළ ඔබගේම Azure OpenAI resource එක සහ model deployment එක create කරයි.
 
 Real Azure OpenAI key එක Git වලට commit කරන්න එපා.
+
+## Create Azure OpenAI
+
+ඔබගේම Azure subscription එක තුළ Azure OpenAI resource එක create කරන්න.
+
+Azure variables set කරන්න.
+
+```bash
+export AIOPS_OPENAI_RESOURCE_GROUP="rg-aks-aiops-lab"
+export AIOPS_OPENAI_LOCATION="eastus"
+export AIOPS_OPENAI_ACCOUNT="aiops-openai-$RANDOM"
+export AZURE_OPENAI_DEPLOYMENT="gpt-4-1-nano"
+export AZURE_OPENAI_MODEL_NAME="gpt-4.1-nano"
+export AZURE_OPENAI_MODEL_VERSION="2025-04-14"
+export AZURE_OPENAI_API_VERSION="2024-10-21"
+```
+
+Resource group එක create කරන්න.
+
+```bash
+az group create \
+  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --location "$AIOPS_OPENAI_LOCATION"
+```
+
+Azure OpenAI account එක create කරන්න.
+
+```bash
+az cognitiveservices account create \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --location "$AIOPS_OPENAI_LOCATION" \
+  --kind OpenAI \
+  --sku S0 \
+  --yes
+```
+
+Model deployment එක create කරන්න.
+
+```bash
+az cognitiveservices account deployment create \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --deployment-name "$AZURE_OPENAI_DEPLOYMENT" \
+  --model-name "$AZURE_OPENAI_MODEL_NAME" \
+  --model-version "$AZURE_OPENAI_MODEL_VERSION" \
+  --model-format OpenAI \
+  --sku-name GlobalStandard \
+  --sku-capacity 1
+```
+
+Endpoint සහ key ලබාගන්න.
+
+```bash
+export AZURE_OPENAI_ENDPOINT="$(az cognitiveservices account show \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --query properties.endpoint -o tsv)"
+
+export AZURE_OPENAI_KEY="$(az cognitiveservices account keys list \
+  --name "$AIOPS_OPENAI_ACCOUNT" \
+  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --query key1 -o tsv)"
+```
+
+Values verify කරන්න.
+
+```bash
+echo "$AZURE_OPENAI_API_VERSION"
+```
+
+Controller එක deploy කරන්න කලින් Azure OpenAI test කරන්න.
+
+```bash
+curl -s "$AZURE_OPENAI_ENDPOINT/openai/deployments/$AZURE_OPENAI_DEPLOYMENT/chat/completions?api-version=$AZURE_OPENAI_API_VERSION" \
+  -H "Content-Type: application/json" \
+  -H "api-key: $AZURE_OPENAI_KEY" \
+  -d '{
+    "messages": [
+      {
+        "role": "system",
+        "content": "Return concise JSON only."
+      },
+      {
+        "role": "user",
+        "content": "Return {\"status\":\"ok\"}"
+      }
+    ],
+    "temperature": 0,
+    "max_tokens": 50
+  }'
+```
+
+ඔබ තෝරාගත් region එකේ model/version එක available නැත්නම්, වෙනත් region එකක් හෝ ඔබගේ Azure subscription එකේ available supported chat model deployment එකක් තෝරන්න.
 
 ## Set lab variables
 
@@ -190,10 +276,6 @@ export AIOPS_NAMESPACE="aiops-system"
 export WATCH_NAMESPACE="incident-demo"
 export AIOPS_REPORT_CONFIGMAP="aiops-latest-incident-report"
 
-export AZURE_OPENAI_ENDPOINT="<your-azure-openai-endpoint>"
-export AZURE_OPENAI_DEPLOYMENT="<your-azure-openai-deployment>"
-export AZURE_OPENAI_API_VERSION="2024-10-21"
-
 export DOCKERHUB_USER="<your-dockerhub-username>"
 export AIOPS_IMAGE="docker.io/$DOCKERHUB_USER/aiops-controller:0.1.0"
 
@@ -204,8 +286,6 @@ export SAMPLE_REPO_FORK_URL="https://github.com/$GITHUB_USER/aks-gitops-sample-a
 Verify කරන්න:
 
 ```bash
-echo "$AZURE_OPENAI_ENDPOINT"
-echo "$AZURE_OPENAI_DEPLOYMENT"
 echo "$AIOPS_IMAGE"
 echo "$SAMPLE_REPO_FORK_URL"
 ```
