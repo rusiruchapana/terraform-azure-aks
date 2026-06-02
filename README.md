@@ -28,6 +28,7 @@ The hands-on labs are organized by learning level:
 Start here:
 
 - [Labs index](labs/README.md)
+- [AI Ops labs](labs/aiops/README.md)
 - [Lab capability requirements](labs/LAB_REQUIREMENTS.md)
 
 This platform is modular. You can provision a minimal AKS cluster for your own testing, or enable additional capabilities for the labs you want to complete.

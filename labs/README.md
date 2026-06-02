@@ -110,6 +110,17 @@ Planned folders:
     professional/06-incident-troubleshooting
     professional/07-security-hardening
 
+
+## AI Ops Labs
+
+Current AI Ops flow:
+
+```text
+aiops/01-event-driven-incident-analyzer
+```
+
+The AI Ops track integrates AI into AKS operations. The first lab deploys an event-driven controller that observes live Kubernetes incidents, collects evidence, calls Azure OpenAI, and recommends GitOps-safe fixes without directly patching workloads.
+
 ## Planned continuation
 
 The current Beginner, Practitioner, and Professional flows are the active learning paths.
