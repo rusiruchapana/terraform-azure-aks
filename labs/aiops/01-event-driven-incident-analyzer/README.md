@@ -42,10 +42,14 @@ The controller also exposes a simple browser dashboard at:
 /aiops
 ```
 
+Each learner creates and uses their own Azure OpenAI resource. Do not use the author's Azure OpenAI endpoint, key, or Azure subscription.
+
 ## What you will learn
 
 You will learn how to:
 
+- Create an Azure OpenAI resource in your own Azure subscription
+- Create a chat model deployment for the lab
 - Run an event-driven AIOps controller inside AKS
 - Detect Kubernetes incidents from live cluster state
 - Collect evidence from pods, deployments, services, endpoints, events, and HTTPRoutes
@@ -56,10 +60,18 @@ You will learn how to:
 - Test two common incident patterns:
   - bad image tag
   - Service selector mismatch
+- Clean all lab-created Kubernetes resources when the lab is complete
 
 ## Architecture
 
 ```text
+Learner Azure subscription
+  Azure OpenAI resource
+  Chat model deployment
+        ^
+        |
+        | compact Kubernetes evidence
+        |
 GitOps sample app repo
   k8s/incident/
   k8s/aiops-controller/
@@ -79,12 +91,6 @@ incident-demo namespace
         |
         v
 aiops-controller in aiops-system
-        |
-        | compact Kubernetes evidence
-        | no secrets
-        | no large logs
-        v
-Azure OpenAI deployment
         |
         v
 Structured RCA JSON
@@ -114,10 +120,10 @@ This lab uses the following components.
 
 | Component | Purpose |
 |---|---|
+| Azure OpenAI | Learner-created AI resource used for structured RCA |
 | `aiops-controller` | Python FastAPI controller that detects incidents and calls Azure OpenAI |
 | `aiops-system` | Namespace where the AIOps controller runs |
 | `incident-demo` | Namespace watched by the controller |
-| Azure OpenAI | Generates the structured RCA report from Kubernetes evidence |
 | ConfigMap | Stores the latest RCA report |
 | Argo CD | Deploys the AIOps controller from Git |
 | Docker Hub | Stores the controller image |
@@ -157,33 +163,86 @@ If you use Option B with Argo CD, fork the sample repo, update `k8s/aiops-contro
 
 Before starting this lab, you need:
 
-- AKS cluster from the previous labs
+- AKS cluster from the previous platform setup
 - Argo CD installed and working
 - Gateway API / NGINX Gateway Fabric already installed
-- `incident-demo` manifests available in the sample GitOps repo
-- Azure OpenAI resource already created
-- Azure OpenAI deployment already working
-- Option A: access to the author-tested public image
-- Option B: your own Docker Hub account and fork of the sample repo
+- Azure CLI installed
+- Azure CLI logged in to your own Azure subscription
+- Permission in your Azure subscription to create a resource group and Azure OpenAI resource
+- Azure OpenAI model availability in your selected region and subscription
+- Docker installed
+- `kubectl` configured for your AKS cluster
+- Sample GitOps repo cloned locally
+- Platform repo cloned locally
 
-You will create your own Azure OpenAI resource and model deployment in your own Azure subscription.
+This lab creates its own Kubernetes namespaces and lab resources. At the end of the lab, you clean them up so the cluster returns to the minimal state it had before the lab started.
 
-The real Azure OpenAI key must not be committed to Git.
+## Set lab variables
+
+Set these variables in your terminal.
+
+Adjust `WORKDIR`, `SAMPLE_REPO`, and `PLATFORM_REPO` to match your own local folder layout.
+
+```bash
+export WORKDIR="$HOME/aks-labs"
+
+export SAMPLE_REPO="$WORKDIR/aks-gitops-sample-app"
+export PLATFORM_REPO="$WORKDIR/terraform-azure-aks"
+
+export AIOPS_NAMESPACE="aiops-system"
+export WATCH_NAMESPACE="incident-demo"
+export AIOPS_REPORT_CONFIGMAP="aiops-latest-incident-report"
+
+export DOCKERHUB_USER="<your-dockerhub-username>"
+export AIOPS_IMAGE="docker.io/$DOCKERHUB_USER/aiops-controller:0.1.0"
+
+export GITHUB_USER="<your-github-username>"
+export SAMPLE_REPO_FORK_URL="https://github.com/$GITHUB_USER/aks-gitops-sample-app.git"
+```
+
+Verify:
+
+```bash
+echo "$WORKDIR"
+echo "$SAMPLE_REPO"
+echo "$PLATFORM_REPO"
+echo "$AIOPS_IMAGE"
+echo "$SAMPLE_REPO_FORK_URL"
+```
+
+If you have not cloned the repositories yet, clone them now.
+
+```bash
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
+
+git clone https://github.com/andrewferdinandus/aks-gitops-sample-app.git
+git clone https://github.com/andrewferdinandus/terraform-azure-aks.git
+```
 
 ## Create Azure OpenAI
 
 Create the Azure OpenAI resource in your own Azure subscription.
 
-Set the Azure variables.
+Set Azure OpenAI variables.
 
 ```bash
-export AIOPS_OPENAI_RESOURCE_GROUP="rg-aks-aiops-lab"
-export AIOPS_OPENAI_LOCATION="eastus"
+export AIOPS_OPENAI_RESOURCE_GROUP="<your-aiops-resource-group>"
+export AIOPS_OPENAI_LOCATION="<azure-region>"
 export AIOPS_OPENAI_ACCOUNT="aiops-openai-$RANDOM"
+
 export AZURE_OPENAI_DEPLOYMENT="gpt-4-1-nano"
 export AZURE_OPENAI_MODEL_NAME="gpt-4.1-nano"
 export AZURE_OPENAI_MODEL_VERSION="2025-04-14"
 export AZURE_OPENAI_API_VERSION="2024-10-21"
+```
+
+Example regions may include `eastus`, `swedencentral`, or another region where your subscription has access to the model you want to deploy. Model availability can vary by region and subscription.
+
+Verify your Azure account.
+
+```bash
+az account show --query "{name:name, subscriptionId:id, tenantId:tenantId}" -o table
 ```
 
 Create the resource group.
@@ -237,7 +296,10 @@ export AZURE_OPENAI_KEY="$(az cognitiveservices account keys list \
 Verify the values.
 
 ```bash
+echo "$AZURE_OPENAI_ENDPOINT"
+echo "$AZURE_OPENAI_DEPLOYMENT"
 echo "$AZURE_OPENAI_API_VERSION"
+test -n "$AZURE_OPENAI_KEY" && echo "AZURE_OPENAI_KEY is set"
 ```
 
 Test Azure OpenAI before deploying the controller.
@@ -264,33 +326,9 @@ curl -s "$AZURE_OPENAI_ENDPOINT/openai/deployments/$AZURE_OPENAI_DEPLOYMENT/chat
 
 If the model or version is not available in your selected region, choose another region or another supported chat model deployment that is available in your Azure subscription.
 
-## Set lab variables
+## Choose image mode
 
-Set these variables in your terminal.
-
-```bash
-export SAMPLE_REPO="/Users/andrewferdinandus/projcts/aks-gitops-sample-app"
-export PLATFORM_REPO="/Users/andrewferdinandus/projcts/terraform-azure-aks"
-
-export AIOPS_NAMESPACE="aiops-system"
-export WATCH_NAMESPACE="incident-demo"
-export AIOPS_REPORT_CONFIGMAP="aiops-latest-incident-report"
-
-export DOCKERHUB_USER="<your-dockerhub-username>"
-export AIOPS_IMAGE="docker.io/$DOCKERHUB_USER/aiops-controller:0.1.0"
-
-export GITHUB_USER="<your-github-username>"
-export SAMPLE_REPO_FORK_URL="https://github.com/$GITHUB_USER/aks-gitops-sample-app.git"
-```
-
-Verify:
-
-```bash
-echo "$AIOPS_IMAGE"
-echo "$SAMPLE_REPO_FORK_URL"
-```
-
-Choose your image mode.
+Choose one of the two image modes.
 
 ### Option A - Use the author-tested image
 
@@ -302,7 +340,7 @@ The sample repo already references:
 docker.io/andrewferdi/aiops-controller:0.1.0
 ```
 
-Continue to the Azure OpenAI secret step.
+Continue to the Kubernetes secret step.
 
 ### Option B - Build and push your own image
 
@@ -350,7 +388,11 @@ rm -f "$PLATFORM_REPO/labs/aiops/01-event-driven-incident-analyzer/argocd/applic
 grep -n "repoURL" "$PLATFORM_REPO/labs/aiops/01-event-driven-incident-analyzer/argocd/application.yaml"
 ```
 
-Create the Azure OpenAI secret.
+## Create the Kubernetes secret
+
+The Azure OpenAI key must not be committed to Git.
+
+Create the secret in the cluster.
 
 ```bash
 kubectl create namespace "$AIOPS_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
@@ -674,6 +716,24 @@ Common causes:
 - Secret is missing
 - RBAC was not applied
 
+### Azure OpenAI resource creation fails
+
+Check your Azure login and subscription.
+
+```bash
+az account show -o table
+```
+
+Check that your selected region and subscription support the model you are trying to deploy.
+
+```bash
+echo "$AIOPS_OPENAI_LOCATION"
+echo "$AZURE_OPENAI_MODEL_NAME"
+echo "$AZURE_OPENAI_MODEL_VERSION"
+```
+
+If the model deployment fails, choose another supported region, model, or model version available to your Azure subscription.
+
 ### Azure OpenAI analysis does not run
 
 Check the secret.
@@ -688,14 +748,9 @@ Check the controller logs.
 kubectl logs -n "$AIOPS_NAMESPACE" deploy/aiops-controller --tail=100
 ```
 
-Remember that this lab uses a low Azure OpenAI quota:
+This lab may use a low Azure OpenAI quota depending on your subscription and deployment.
 
-```text
-1 request per minute
-1000 tokens per minute
-```
-
-The controller also throttles repeat analysis for the same incident.
+The controller throttles repeat analysis for the same incident.
 
 ```text
 INCIDENT_COOLDOWN_SECONDS=120
@@ -754,6 +809,17 @@ This lab should leave the cluster in the same minimal state it had before the la
 
 Stop any local port-forward terminal with `Ctrl+C`.
 
+Restore the local sample repo files if you changed them during the incident tests.
+
+```bash
+cd "$SAMPLE_REPO"
+
+perl -0pi -e 's#image: nginx:does-not-exist-aiops-lab#image: nginx:1.27-alpine#g' k8s/incident/deployment.yaml
+perl -0pi -e 's/app: wrong-incident-demo/app: incident-demo/g' k8s/incident/service.yaml
+
+git status
+```
+
 Remove the AIOps Argo CD application.
 
 ```bash
@@ -779,9 +845,15 @@ kubectl get pods -A | grep -E 'aiops|incident-demo' || true
 
 The commands above clean the Kubernetes resources used by this lab.
 
-If you created an Azure OpenAI resource only for this lab and you are not continuing to the next AIOps lab, delete that Azure resource or resource group from your own Azure subscription.
+If you created an Azure OpenAI resource only for this lab and you are not continuing to the next AIOps lab, delete that Azure resource group from your own Azure subscription.
 
-Do not use the author's Azure OpenAI endpoint or key. Each learner must use their own Azure OpenAI resource and deployment.
+```bash
+az group delete \
+  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --yes
+```
+
+If you continue to the next AIOps lab, that lab will tell you whether to reuse this Azure OpenAI resource or create a new one. The next lab must not depend on Kubernetes resources left behind by this lab.
 
 ## What you completed
 
@@ -795,5 +867,6 @@ You deployed an AIOps controller into AKS and verified that it can:
 - write the latest RCA to a ConfigMap
 - expose the result through a browser dashboard
 - recommend GitOps-safe fixes without directly patching workloads
+- clean all Kubernetes resources created or used by the lab
 
-You now have the foundation for the next AIOps labs, where the recommendation flow can be extended into patch generation and human-approved pull requests.
+You now understand the event-driven AIOps pattern. Future AIOps labs will recreate only the resources they need and must not depend on leftovers from this lab.

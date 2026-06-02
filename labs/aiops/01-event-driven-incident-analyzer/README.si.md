@@ -42,10 +42,14 @@ Controller එක simple browser dashboard එකක් expose කරයි:
 /aiops
 ```
 
+හැම learner කෙනෙක්ම තමන්ගේ Azure subscription එකේ තමන්ගේ Azure OpenAI resource එක create කර භාවිතා කළ යුතුයි. Authorගේ Azure OpenAI endpoint, key, හෝ Azure subscription භාවිතා කරන්න එපා.
+
 ## What you will learn
 
 ඔබ ඉගෙනගන්න දේවල්:
 
+- ඔබගේම Azure subscription එකේ Azure OpenAI resource එකක් create කිරීම
+- මෙම lab එක සඳහා chat model deployment එකක් create කිරීම
 - AKS තුළ event-driven AIOps controller එකක් run කිරීම
 - Live cluster state එකෙන් Kubernetes incidents detect කිරීම
 - pods, deployments, services, endpoints, events, HTTPRoutes වලින් evidence collect කිරීම
@@ -56,10 +60,18 @@ Controller එක simple browser dashboard එකක් expose කරයි:
 - common incident patterns දෙකක් test කිරීම:
   - bad image tag
   - Service selector mismatch
+- lab එක අවසානයේ lab-created Kubernetes resources සියල්ල clean කිරීම
 
 ## Architecture
 
 ```text
+Learner Azure subscription
+  Azure OpenAI resource
+  Chat model deployment
+        ^
+        |
+        | compact Kubernetes evidence
+        |
 GitOps sample app repo
   k8s/incident/
   k8s/aiops-controller/
@@ -79,12 +91,6 @@ incident-demo namespace
         |
         v
 aiops-controller in aiops-system
-        |
-        | compact Kubernetes evidence
-        | no secrets
-        | no large logs
-        v
-Azure OpenAI deployment
         |
         v
 Structured RCA JSON
@@ -114,10 +120,10 @@ detect -> AI decides -> direct kubectl patch
 
 | Component | Purpose |
 |---|---|
+| Azure OpenAI | learner විසින් create කරන structured RCA සඳහා භාවිතා වන AI resource එක |
 | `aiops-controller` | incidents detect කර Azure OpenAI call කරන Python FastAPI controller |
 | `aiops-system` | AIOps controller එක run වන namespace එක |
 | `incident-demo` | Controller එක watch කරන namespace එක |
-| Azure OpenAI | Kubernetes evidence වලින් structured RCA report generate කරයි |
 | ConfigMap | latest RCA report එක store කරයි |
 | Argo CD | Git වලින් AIOps controller deploy කරයි |
 | Docker Hub | controller image එක store කරයි |
@@ -157,33 +163,86 @@ Option B Argo CD සමඟ භාවිතා කරනවා නම්, sample 
 
 මෙම lab එක ආරම්භ කිරීමට පෙර අවශ්‍ය දේවල්:
 
-- පෙර labs වලින් ඇති AKS cluster එක
+- පෙර platform setup එකෙන් ඇති AKS cluster එක
 - Argo CD installed and working
 - Gateway API / NGINX Gateway Fabric installed
-- sample GitOps repo එකේ `incident-demo` manifests
-- Azure OpenAI resource already created
-- Azure OpenAI deployment already working
-- Option A: author-tested public image එක pull කිරීමට access
-- Option B: ඔබගේ Docker Hub account එක සහ sample repo fork එකක්
+- Azure CLI installed
+- Azure CLI ඔබගේම Azure subscription එකට logged in
+- ඔබගේ Azure subscription එකේ resource group සහ Azure OpenAI resource create කිරීමට permission
+- ඔබ තෝරාගන්නා region/subscription එකේ Azure OpenAI model availability
+- Docker installed
+- `kubectl` ඔබගේ AKS cluster එකට configured
+- Sample GitOps repo cloned locally
+- Platform repo cloned locally
 
-මෙම lab එකේදී ඔබගේ Azure subscription එක තුළ ඔබගේම Azure OpenAI resource එක සහ model deployment එක create කරයි.
+මෙම lab එක තමන්ට අවශ්‍ය Kubernetes namespaces සහ lab resources create කරයි. Lab එක අවසානයේ ඒවා clean කර cluster එක lab එක ආරම්භ වීමට පෙර තිබූ minimal state එකට ආපසු යා යුතුයි.
 
-Real Azure OpenAI key එක Git වලට commit කරන්න එපා.
+## Set lab variables
+
+Terminal එකේ මේ variables set කරන්න.
+
+`WORKDIR`, `SAMPLE_REPO`, සහ `PLATFORM_REPO` ඔබගේ local folder layout එකට ගැලපෙන ලෙස වෙනස් කරන්න.
+
+```bash
+export WORKDIR="$HOME/aks-labs"
+
+export SAMPLE_REPO="$WORKDIR/aks-gitops-sample-app"
+export PLATFORM_REPO="$WORKDIR/terraform-azure-aks"
+
+export AIOPS_NAMESPACE="aiops-system"
+export WATCH_NAMESPACE="incident-demo"
+export AIOPS_REPORT_CONFIGMAP="aiops-latest-incident-report"
+
+export DOCKERHUB_USER="<your-dockerhub-username>"
+export AIOPS_IMAGE="docker.io/$DOCKERHUB_USER/aiops-controller:0.1.0"
+
+export GITHUB_USER="<your-github-username>"
+export SAMPLE_REPO_FORK_URL="https://github.com/$GITHUB_USER/aks-gitops-sample-app.git"
+```
+
+Verify කරන්න:
+
+```bash
+echo "$WORKDIR"
+echo "$SAMPLE_REPO"
+echo "$PLATFORM_REPO"
+echo "$AIOPS_IMAGE"
+echo "$SAMPLE_REPO_FORK_URL"
+```
+
+Repositories clone කරලා නැත්නම් දැන් clone කරන්න.
+
+```bash
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
+
+git clone https://github.com/andrewferdinandus/aks-gitops-sample-app.git
+git clone https://github.com/andrewferdinandus/terraform-azure-aks.git
+```
 
 ## Create Azure OpenAI
 
 ඔබගේම Azure subscription එක තුළ Azure OpenAI resource එක create කරන්න.
 
-Azure variables set කරන්න.
+Azure OpenAI variables set කරන්න.
 
 ```bash
-export AIOPS_OPENAI_RESOURCE_GROUP="rg-aks-aiops-lab"
-export AIOPS_OPENAI_LOCATION="eastus"
+export AIOPS_OPENAI_RESOURCE_GROUP="<your-aiops-resource-group>"
+export AIOPS_OPENAI_LOCATION="<azure-region>"
 export AIOPS_OPENAI_ACCOUNT="aiops-openai-$RANDOM"
+
 export AZURE_OPENAI_DEPLOYMENT="gpt-4-1-nano"
 export AZURE_OPENAI_MODEL_NAME="gpt-4.1-nano"
 export AZURE_OPENAI_MODEL_VERSION="2025-04-14"
 export AZURE_OPENAI_API_VERSION="2024-10-21"
+```
+
+Example regions ලෙස `eastus`, `swedencentral`, හෝ ඔබගේ subscription එකට model access ඇති වෙනත් region එකක් භාවිතා කළ හැක. Model availability region සහ subscription අනුව වෙනස් විය හැක.
+
+ඔබගේ Azure account එක verify කරන්න.
+
+```bash
+az account show --query "{name:name, subscriptionId:id, tenantId:tenantId}" -o table
 ```
 
 Resource group එක create කරන්න.
@@ -237,7 +296,10 @@ export AZURE_OPENAI_KEY="$(az cognitiveservices account keys list \
 Values verify කරන්න.
 
 ```bash
+echo "$AZURE_OPENAI_ENDPOINT"
+echo "$AZURE_OPENAI_DEPLOYMENT"
 echo "$AZURE_OPENAI_API_VERSION"
+test -n "$AZURE_OPENAI_KEY" && echo "AZURE_OPENAI_KEY is set"
 ```
 
 Controller එක deploy කරන්න කලින් Azure OpenAI test කරන්න.
@@ -264,33 +326,9 @@ curl -s "$AZURE_OPENAI_ENDPOINT/openai/deployments/$AZURE_OPENAI_DEPLOYMENT/chat
 
 ඔබ තෝරාගත් region එකේ model/version එක available නැත්නම්, වෙනත් region එකක් හෝ ඔබගේ Azure subscription එකේ available supported chat model deployment එකක් තෝරන්න.
 
-## Set lab variables
+## Choose image mode
 
-Terminal එකේ මේ variables set කරන්න.
-
-```bash
-export SAMPLE_REPO="/Users/andrewferdinandus/projcts/aks-gitops-sample-app"
-export PLATFORM_REPO="/Users/andrewferdinandus/projcts/terraform-azure-aks"
-
-export AIOPS_NAMESPACE="aiops-system"
-export WATCH_NAMESPACE="incident-demo"
-export AIOPS_REPORT_CONFIGMAP="aiops-latest-incident-report"
-
-export DOCKERHUB_USER="<your-dockerhub-username>"
-export AIOPS_IMAGE="docker.io/$DOCKERHUB_USER/aiops-controller:0.1.0"
-
-export GITHUB_USER="<your-github-username>"
-export SAMPLE_REPO_FORK_URL="https://github.com/$GITHUB_USER/aks-gitops-sample-app.git"
-```
-
-Verify කරන්න:
-
-```bash
-echo "$AIOPS_IMAGE"
-echo "$SAMPLE_REPO_FORK_URL"
-```
-
-Image mode එක තෝරන්න.
+Image modes දෙකෙන් එකක් තෝරන්න.
 
 ### Option A - Use the author-tested image
 
@@ -302,7 +340,7 @@ Sample repo එක already reference කරන්නේ:
 docker.io/andrewferdi/aiops-controller:0.1.0
 ```
 
-Azure OpenAI secret step එකට යන්න.
+Kubernetes secret step එකට යන්න.
 
 ### Option B - Build and push your own image
 
@@ -350,7 +388,11 @@ rm -f "$PLATFORM_REPO/labs/aiops/01-event-driven-incident-analyzer/argocd/applic
 grep -n "repoURL" "$PLATFORM_REPO/labs/aiops/01-event-driven-incident-analyzer/argocd/application.yaml"
 ```
 
-Azure OpenAI secret එක create කරන්න.
+## Create the Kubernetes secret
+
+Azure OpenAI key එක Git වලට commit කරන්න එපා.
+
+Cluster එකේ secret එක create කරන්න.
 
 ```bash
 kubectl create namespace "$AIOPS_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
@@ -674,6 +716,24 @@ Common causes:
 - Secret missing
 - RBAC apply වෙලා නැහැ
 
+### Azure OpenAI resource creation fails
+
+ඔබගේ Azure login සහ subscription check කරන්න.
+
+```bash
+az account show -o table
+```
+
+ඔබ තෝරාගත් region සහ subscription එක ඔබ deploy කිරීමට උත්සාහ කරන model එක support කරනවද බලන්න.
+
+```bash
+echo "$AIOPS_OPENAI_LOCATION"
+echo "$AZURE_OPENAI_MODEL_NAME"
+echo "$AZURE_OPENAI_MODEL_VERSION"
+```
+
+Model deployment fail වුණොත්, ඔබගේ Azure subscription එකට available වෙනත් supported region, model, හෝ model version එකක් තෝරන්න.
+
 ### Azure OpenAI analysis does not run
 
 Secret එක check කරන්න.
@@ -688,12 +748,7 @@ Controller logs check කරන්න.
 kubectl logs -n "$AIOPS_NAMESPACE" deploy/aiops-controller --tail=100
 ```
 
-මෙම lab එක low Azure OpenAI quota එකක් භාවිතා කරයි:
-
-```text
-1 request per minute
-1000 tokens per minute
-```
+ඔබගේ subscription සහ deployment එක අනුව මෙම lab එකට low Azure OpenAI quota එකක් තිබිය හැක.
 
 Controller එක same incident එකකට repeat analysis throttle කරයි.
 
@@ -754,6 +809,17 @@ Service selector එක pod labels වලට match විය යුතුයි.
 
 Local port-forward terminal එකක් open නම් `Ctrl+C` press කර stop කරන්න.
 
+Incident tests අතරතුර ඔබ local sample repo files වෙනස් කළා නම් ඒවා restore කරන්න.
+
+```bash
+cd "$SAMPLE_REPO"
+
+perl -0pi -e 's#image: nginx:does-not-exist-aiops-lab#image: nginx:1.27-alpine#g' k8s/incident/deployment.yaml
+perl -0pi -e 's/app: wrong-incident-demo/app: incident-demo/g' k8s/incident/service.yaml
+
+git status
+```
+
 AIOps Argo CD application එක remove කරන්න.
 
 ```bash
@@ -779,9 +845,15 @@ kubectl get pods -A | grep -E 'aiops|incident-demo' || true
 
 ඉහත commands Kubernetes resources clean කරයි.
 
-ඔබ මෙම lab එකට පමණක් Azure OpenAI resource එකක් create කරලා, next AIOps lab එකට continue නොකරනවා නම්, ඔබගේ Azure subscription එකෙන් එම Azure resource එක හෝ resource group එක delete කරන්න.
+ඔබ මෙම lab එකට පමණක් Azure OpenAI resource එකක් create කරලා, next AIOps lab එකට continue නොකරනවා නම්, ඔබගේ Azure subscription එකෙන් එම Azure resource group එක delete කරන්න.
 
-Authorගේ Azure OpenAI endpoint හෝ key භාවිතා කරන්න එපා. හැම learner කෙනෙක්ම තමන්ගේ Azure OpenAI resource සහ deployment භාවිතා කළ යුතුයි.
+```bash
+az group delete \
+  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
+  --yes
+```
+
+ඔබ next AIOps lab එකට continue කරනවා නම්, ඒ lab එක මෙම Azure OpenAI resource එක reuse කරන්නද නැත්නම් අලුත් එකක් create කරන්නද කියලා කියයි. Next lab එක මෙම lab එකෙන් ඉතිරි වූ Kubernetes resources මත depend වෙන්න බැහැ.
 
 ## What you completed
 
@@ -795,5 +867,6 @@ Authorගේ Azure OpenAI endpoint හෝ key භාවිතා කරන්න
 - latest RCA ConfigMap එකකට ලියීම
 - browser dashboard එකක් හරහා result expose කිරීම
 - workloads direct patch නොකර GitOps-safe fixes recommend කිරීම
+- lab එක create/use කළ Kubernetes resources clean කිරීම
 
-දැන් ඔබට next AIOps labs සඳහා foundation එක තියෙනවා. ඊළඟ labs වලදී මෙම recommendation flow එක patch generation සහ human-approved pull requests දක්වා extend කළ හැක.
+දැන් ඔබ event-driven AIOps pattern එක තේරුම්ගෙන ඇත. ඉදිරි AIOps labs තමන්ට අවශ්‍ය resources පමණක් නැවත create කරයි සහ මෙම lab එකෙන් ඉතිරි වූ resources මත depend නොවිය යුතුයි.
