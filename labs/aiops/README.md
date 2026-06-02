@@ -4,6 +4,15 @@ These labs add AI-assisted operations patterns to the AKS platform.
 
 The goal is not to use AI as a chat assistant beside the platform. The goal is to integrate AI into infrastructure operations so that cluster events, Kubernetes evidence, GitOps state, and safe remediation workflows can be connected.
 
+## Shared setup
+
+Before running any AI Ops lab that calls Azure OpenAI, follow the shared setup guide:
+
+- [Azure OpenAI setup](AZURE_OPENAI_SETUP.md)
+- [Azure OpenAI setup - Sinhala](AZURE_OPENAI_SETUP.si.md)
+
+Each AI Ops lab still creates and cleans its own Kubernetes resources.
+
 ## Labs
 
 | Lab | Topic | Status |

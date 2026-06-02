@@ -220,111 +220,26 @@ git clone https://github.com/andrewferdinandus/aks-gitops-sample-app.git
 git clone https://github.com/andrewferdinandus/terraform-azure-aks.git
 ```
 
-## Create Azure OpenAI
+## Azure OpenAI prerequisite
 
-ඔබගේම Azure subscription එක තුළ Azure OpenAI resource එක create කරන්න.
+මෙම lab එකට Azure OpenAI අවශ්‍යයි.
 
-Azure OpenAI variables set කරන්න.
+Continue කිරීමට පෙර shared Azure OpenAI setup guide එක follow කරන්න:
 
-```bash
-export AIOPS_OPENAI_RESOURCE_GROUP="<your-aiops-resource-group>"
-export AIOPS_OPENAI_LOCATION="<azure-region>"
-export AIOPS_OPENAI_ACCOUNT="aiops-openai-$RANDOM"
-
-export AZURE_OPENAI_DEPLOYMENT="gpt-4-1-nano"
-export AZURE_OPENAI_MODEL_NAME="gpt-4.1-nano"
-export AZURE_OPENAI_MODEL_VERSION="2025-04-14"
-export AZURE_OPENAI_API_VERSION="2024-10-21"
+```text
+../AZURE_OPENAI_SETUP.si.md
 ```
 
-Example regions ලෙස `eastus`, `swedencentral`, හෝ ඔබගේ subscription එකට model access ඇති වෙනත් region එකක් භාවිතා කළ හැක. Model availability region සහ subscription අනුව වෙනස් විය හැක.
-
-ඔබගේ Azure account එක verify කරන්න.
+Shared setup එක complete කළාට පසු ඔබගේ terminal එකේ මේ values තිබිය යුතුයි:
 
 ```bash
-az account show --query "{name:name, subscriptionId:id, tenantId:tenantId}" -o table
+AZURE_OPENAI_ENDPOINT
+AZURE_OPENAI_KEY
+AZURE_OPENAI_DEPLOYMENT
+AZURE_OPENAI_API_VERSION
 ```
 
-Resource group එක create කරන්න.
-
-```bash
-az group create \
-  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --location "$AIOPS_OPENAI_LOCATION"
-```
-
-Azure OpenAI account එක create කරන්න.
-
-```bash
-az cognitiveservices account create \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --location "$AIOPS_OPENAI_LOCATION" \
-  --kind OpenAI \
-  --sku S0 \
-  --yes
-```
-
-Model deployment එක create කරන්න.
-
-```bash
-az cognitiveservices account deployment create \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --deployment-name "$AZURE_OPENAI_DEPLOYMENT" \
-  --model-name "$AZURE_OPENAI_MODEL_NAME" \
-  --model-version "$AZURE_OPENAI_MODEL_VERSION" \
-  --model-format OpenAI \
-  --sku-name GlobalStandard \
-  --sku-capacity 1
-```
-
-Endpoint සහ key ලබාගන්න.
-
-```bash
-export AZURE_OPENAI_ENDPOINT="$(az cognitiveservices account show \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --query properties.endpoint -o tsv)"
-
-export AZURE_OPENAI_KEY="$(az cognitiveservices account keys list \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --query key1 -o tsv)"
-```
-
-Values verify කරන්න.
-
-```bash
-echo "$AZURE_OPENAI_ENDPOINT"
-echo "$AZURE_OPENAI_DEPLOYMENT"
-echo "$AZURE_OPENAI_API_VERSION"
-test -n "$AZURE_OPENAI_KEY" && echo "AZURE_OPENAI_KEY is set"
-```
-
-Controller එක deploy කරන්න කලින් Azure OpenAI test කරන්න.
-
-```bash
-curl -s "$AZURE_OPENAI_ENDPOINT/openai/deployments/$AZURE_OPENAI_DEPLOYMENT/chat/completions?api-version=$AZURE_OPENAI_API_VERSION" \
-  -H "Content-Type: application/json" \
-  -H "api-key: $AZURE_OPENAI_KEY" \
-  -d '{
-    "messages": [
-      {
-        "role": "system",
-        "content": "Return concise JSON only."
-      },
-      {
-        "role": "user",
-        "content": "Return {\"status\":\"ok\"}"
-      }
-    ],
-    "temperature": 0,
-    "max_tokens": 50
-  }'
-```
-
-ඔබ තෝරාගත් region එකේ model/version එක available නැත්නම්, වෙනත් region එකක් හෝ ඔබගේ Azure subscription එකේ available supported chat model deployment එකක් තෝරන්න.
+Authorගේ Azure OpenAI endpoint, key, resource group, හෝ Azure subscription භාවිතා කරන්න එපා.
 
 ## Choose image mode
 
@@ -845,15 +760,13 @@ kubectl get pods -A | grep -E 'aiops|incident-demo' || true
 
 ඉහත commands Kubernetes resources clean කරයි.
 
-ඔබ මෙම lab එකට පමණක් Azure OpenAI resource එකක් create කරලා, next AIOps lab එකට continue නොකරනවා නම්, ඔබගේ Azure subscription එකෙන් එම Azure resource group එක delete කරන්න.
+ඔබ Azure OpenAI resource එක AI Ops labs සඳහා පමණක් create කරලා තව labs continue නොකරනවා නම්, shared setup guide එකේ cloud cleanup section එක follow කරන්න:
 
-```bash
-az group delete \
-  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --yes
+```text
+../AZURE_OPENAI_SETUP.si.md
 ```
 
-ඔබ next AIOps lab එකට continue කරනවා නම්, ඒ lab එක මෙම Azure OpenAI resource එක reuse කරන්නද නැත්නම් අලුත් එකක් create කරන්නද කියලා කියයි. Next lab එක මෙම lab එකෙන් ඉතිරි වූ Kubernetes resources මත depend වෙන්න බැහැ.
+ඉදිරි AI Ops labs තමන්ට අවශ්‍ය Kubernetes resources පමණක් නැවත create කරයි සහ මෙම lab එකෙන් ඉතිරි වූ resources මත depend නොවිය යුතුයි.
 
 ## What you completed
 

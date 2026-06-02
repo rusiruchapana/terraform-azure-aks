@@ -220,111 +220,26 @@ git clone https://github.com/andrewferdinandus/aks-gitops-sample-app.git
 git clone https://github.com/andrewferdinandus/terraform-azure-aks.git
 ```
 
-## Create Azure OpenAI
+## Azure OpenAI prerequisite
 
-Create the Azure OpenAI resource in your own Azure subscription.
+This lab requires Azure OpenAI.
 
-Set Azure OpenAI variables.
+Follow the shared Azure OpenAI setup guide before continuing:
 
-```bash
-export AIOPS_OPENAI_RESOURCE_GROUP="<your-aiops-resource-group>"
-export AIOPS_OPENAI_LOCATION="<azure-region>"
-export AIOPS_OPENAI_ACCOUNT="aiops-openai-$RANDOM"
-
-export AZURE_OPENAI_DEPLOYMENT="gpt-4-1-nano"
-export AZURE_OPENAI_MODEL_NAME="gpt-4.1-nano"
-export AZURE_OPENAI_MODEL_VERSION="2025-04-14"
-export AZURE_OPENAI_API_VERSION="2024-10-21"
+```text
+../AZURE_OPENAI_SETUP.md
 ```
 
-Example regions may include `eastus`, `swedencentral`, or another region where your subscription has access to the model you want to deploy. Model availability can vary by region and subscription.
-
-Verify your Azure account.
+After completing the shared setup, your terminal must have these values:
 
 ```bash
-az account show --query "{name:name, subscriptionId:id, tenantId:tenantId}" -o table
+AZURE_OPENAI_ENDPOINT
+AZURE_OPENAI_KEY
+AZURE_OPENAI_DEPLOYMENT
+AZURE_OPENAI_API_VERSION
 ```
 
-Create the resource group.
-
-```bash
-az group create \
-  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --location "$AIOPS_OPENAI_LOCATION"
-```
-
-Create the Azure OpenAI account.
-
-```bash
-az cognitiveservices account create \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --location "$AIOPS_OPENAI_LOCATION" \
-  --kind OpenAI \
-  --sku S0 \
-  --yes
-```
-
-Create the model deployment.
-
-```bash
-az cognitiveservices account deployment create \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --deployment-name "$AZURE_OPENAI_DEPLOYMENT" \
-  --model-name "$AZURE_OPENAI_MODEL_NAME" \
-  --model-version "$AZURE_OPENAI_MODEL_VERSION" \
-  --model-format OpenAI \
-  --sku-name GlobalStandard \
-  --sku-capacity 1
-```
-
-Get the endpoint and key.
-
-```bash
-export AZURE_OPENAI_ENDPOINT="$(az cognitiveservices account show \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --query properties.endpoint -o tsv)"
-
-export AZURE_OPENAI_KEY="$(az cognitiveservices account keys list \
-  --name "$AIOPS_OPENAI_ACCOUNT" \
-  --resource-group "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --query key1 -o tsv)"
-```
-
-Verify the values.
-
-```bash
-echo "$AZURE_OPENAI_ENDPOINT"
-echo "$AZURE_OPENAI_DEPLOYMENT"
-echo "$AZURE_OPENAI_API_VERSION"
-test -n "$AZURE_OPENAI_KEY" && echo "AZURE_OPENAI_KEY is set"
-```
-
-Test Azure OpenAI before deploying the controller.
-
-```bash
-curl -s "$AZURE_OPENAI_ENDPOINT/openai/deployments/$AZURE_OPENAI_DEPLOYMENT/chat/completions?api-version=$AZURE_OPENAI_API_VERSION" \
-  -H "Content-Type: application/json" \
-  -H "api-key: $AZURE_OPENAI_KEY" \
-  -d '{
-    "messages": [
-      {
-        "role": "system",
-        "content": "Return concise JSON only."
-      },
-      {
-        "role": "user",
-        "content": "Return {\"status\":\"ok\"}"
-      }
-    ],
-    "temperature": 0,
-    "max_tokens": 50
-  }'
-```
-
-If the model or version is not available in your selected region, choose another region or another supported chat model deployment that is available in your Azure subscription.
+Do not use the author's Azure OpenAI endpoint, key, resource group, or Azure subscription.
 
 ## Choose image mode
 
@@ -845,15 +760,13 @@ kubectl get pods -A | grep -E 'aiops|incident-demo' || true
 
 The commands above clean the Kubernetes resources used by this lab.
 
-If you created an Azure OpenAI resource only for this lab and you are not continuing to the next AIOps lab, delete that Azure resource group from your own Azure subscription.
+If you created Azure OpenAI only for the AI Ops labs and you are not continuing, follow the cloud cleanup section in the shared setup guide:
 
-```bash
-az group delete \
-  --name "$AIOPS_OPENAI_RESOURCE_GROUP" \
-  --yes
+```text
+../AZURE_OPENAI_SETUP.md
 ```
 
-If you continue to the next AIOps lab, that lab will tell you whether to reuse this Azure OpenAI resource or create a new one. The next lab must not depend on Kubernetes resources left behind by this lab.
+Future AI Ops labs will recreate only the Kubernetes resources they need and must not depend on leftovers from this lab.
 
 ## What you completed
 
