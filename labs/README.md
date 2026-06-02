@@ -10,6 +10,12 @@ The labs are organized by learning level:
 
 This file is the source of truth for the current lab order.
 
+Before starting labs, review capability requirements:
+
+    LAB_REQUIREMENTS.md
+
+Not every lab is expected to run on a minimal AKS cluster. Some labs require optional capabilities such as Gateway API, Argo CD, Flux, Key Vault, Workload Identity, monitoring, or OpenTelemetry.
+
 If the lab flow changes in the future, update this file first.
 
 For the wider project roadmap, planned professional continuation, final projects, and AI track, see:

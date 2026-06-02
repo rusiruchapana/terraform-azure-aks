@@ -17,6 +17,25 @@ Official documentation:
 
 This project currently maintains documentation in English and Sinhala only.
 
+## Hands-on labs
+
+The hands-on labs are organized by learning level:
+
+- Beginner labs: AKS and Kubernetes basics
+- Practitioner labs: CI/CD, DevSecOps, secrets, monitoring, and telemetry
+- Professional labs: GitOps, release strategies, incident troubleshooting, and security hardening
+
+Start here:
+
+- [Labs index](labs/README.md)
+- [Lab capability requirements](labs/LAB_REQUIREMENTS.md)
+
+This platform is modular. You can provision a minimal AKS cluster for your own testing, or enable additional capabilities for the labs you want to complete.
+
+Some labs require optional capabilities such as Gateway API, Argo CD, Flux, Azure Container Registry, Key Vault, Workload Identity, monitoring, or OpenTelemetry.
+
+Review the lab capability requirements before provisioning if you want to follow the full lab path.
+
 ## Current Platform Capabilities
 
 - Terraform-based AKS platform

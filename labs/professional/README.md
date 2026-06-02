@@ -8,6 +8,12 @@ For the current full lab order, see:
 
     ../README.md
 
+Before starting a professional lab, review capability requirements:
+
+    ../LAB_REQUIREMENTS.md
+
+Professional labs may require Argo CD, Flux, Gateway API, or other optional platform capabilities.
+
 For the planned professional continuation, stack-specific labs, final projects, and AI-assisted learning track, see:
 
     ../../ROADMAP.md
@@ -18,13 +24,13 @@ Practice advanced AKS platform engineering workflows and production-style patter
 
 ## Current professional flow
 
-1. Argo CD GitOps
-2. Flux GitOps
-3. dev to qa to prod promotion
-4. Blue/green deployment
-5. Canary deployment
-6. Incident troubleshooting
-7. Security hardening
+1. [Argo CD GitOps](01-argocd-gitops)
+2. [Flux GitOps](02-flux-gitops)
+3. [dev to qa to prod promotion](03-dev-qa-prod-promotion)
+4. [Blue/green deployment](04-blue-green-deployment)
+5. [Canary deployment](05-canary-deployment)
+6. [Incident troubleshooting](06-incident-troubleshooting)
+7. [Security hardening](07-security-hardening)
 
 ## Lab 01 - Argo CD GitOps
 
