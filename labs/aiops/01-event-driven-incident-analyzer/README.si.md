@@ -169,10 +169,10 @@ Option B Argo CD සමඟ භාවිතා කරනවා නම්, sample 
 මෙම lab එක existing Azure OpenAI deployment එක භාවිතා කරයි:
 
 ```text
-Resource group: rg-aks-aiops
-Azure OpenAI account: aiops-openai-9954
-Deployment: gpt-4-1-nano
-Model: gpt-4.1-nano
+Resource group: <your-aiops-resource-group>
+Azure OpenAI account: <your-azure-openai-account>
+Deployment: <your-azure-openai-deployment>
+Model: gpt-4.1-nano or another supported chat model
 API version: 2024-10-21
 ```
 
@@ -190,8 +190,8 @@ export AIOPS_NAMESPACE="aiops-system"
 export WATCH_NAMESPACE="incident-demo"
 export AIOPS_REPORT_CONFIGMAP="aiops-latest-incident-report"
 
-export AZURE_OPENAI_ENDPOINT="https://aiops-openai-9954-17090.openai.azure.com/"
-export AZURE_OPENAI_DEPLOYMENT="gpt-4-1-nano"
+export AZURE_OPENAI_ENDPOINT="<your-azure-openai-endpoint>"
+export AZURE_OPENAI_DEPLOYMENT="<your-azure-openai-deployment>"
 export AZURE_OPENAI_API_VERSION="2024-10-21"
 
 export DOCKERHUB_USER="<your-dockerhub-username>"
@@ -670,32 +670,38 @@ Service selector එක pod labels වලට match විය යුතුයි.
 
 ## Cleanup
 
-Incident app එක healthy desired state එකට restore කරන්න.
+මෙම lab එක අවසන් වූ පසු cluster එක lab එක ආරම්භ කිරීමට පෙර තිබූ minimal state එකටම යා යුතුයි.
 
-```bash
-cd "$SAMPLE_REPO"
+Local port-forward terminal එකක් open නම් `Ctrl+C` press කර stop කරන්න.
 
-perl -0pi -e 's#image: nginx:does-not-exist-aiops-lab#image: nginx:1.27-alpine#g' k8s/incident/deployment.yaml
-perl -0pi -e 's/app: wrong-incident-demo/app: incident-demo/g' k8s/incident/service.yaml
-
-kubectl apply -k k8s/incident
-```
-
-Optional: AIOps controller Argo CD application එක remove කරන්න.
+AIOps Argo CD application එක remove කරන්න.
 
 ```bash
 cd "$PLATFORM_REPO"
 
-kubectl delete -f labs/aiops/01-event-driven-incident-analyzer/argocd/application.yaml
+kubectl delete -f labs/aiops/01-event-driven-incident-analyzer/argocd/application.yaml --ignore-not-found=true
 ```
 
-Optional: AIOps namespace එක remove කරන්න.
+මෙම lab එක create/use කළ namespaces remove කරන්න.
 
 ```bash
-kubectl delete namespace "$AIOPS_NAMESPACE"
+kubectl delete namespace "$AIOPS_NAMESPACE" --ignore-not-found=true
+kubectl delete namespace "$WATCH_NAMESPACE" --ignore-not-found=true
 ```
 
-Next AIOps labs continue කරන්න අදහස් කරනවා නම් Azure OpenAI resource එක delete කරන්න එපා.
+Cluster එකේ lab resources ඉතිරි නැද්ද verify කරන්න.
+
+```bash
+kubectl get application -n argocd aiops-controller 2>/dev/null || true
+kubectl get ns | grep -E 'aiops-system|incident-demo' || true
+kubectl get pods -A | grep -E 'aiops|incident-demo' || true
+```
+
+ඉහත commands Kubernetes resources clean කරයි.
+
+ඔබ මෙම lab එකට පමණක් Azure OpenAI resource එකක් create කරලා, next AIOps lab එකට continue නොකරනවා නම්, ඔබගේ Azure subscription එකෙන් එම Azure resource එක හෝ resource group එක delete කරන්න.
+
+Authorගේ Azure OpenAI endpoint හෝ key භාවිතා කරන්න එපා. හැම learner කෙනෙක්ම තමන්ගේ Azure OpenAI resource සහ deployment භාවිතා කළ යුතුයි.
 
 ## What you completed
 
