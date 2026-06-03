@@ -1,8 +1,14 @@
 # AI Ops Labs
 
-These labs add AI-assisted operations patterns to the AKS platform.
+AI Ops labs show how to integrate AI into AKS operations safely.
 
-The goal is not to use AI as a chat assistant beside the platform. The goal is to integrate AI into infrastructure operations so that cluster events, Kubernetes evidence, GitOps state, and safe remediation workflows can be connected.
+These labs are not about using AI as a separate chat assistant. The controller runs inside the cluster, watches real Kubernetes state, collects evidence, asks Azure OpenAI for root cause analysis, and produces GitOps-safe recommendations.
+
+The safety rule is simple:
+
+    AI helps investigate and prepare the fix.
+    Humans approve the production change.
+    GitOps applies the final change.
 
 ## Shared setup
 
@@ -11,48 +17,48 @@ Before running any AI Ops lab that calls Azure OpenAI, follow the shared setup g
 - [Azure OpenAI setup](../shared/azure-openai-setup.md)
 - [Azure OpenAI setup - Sinhala](../shared/azure-openai-setup.si.md)
 
-Each AI Ops lab still creates and cleans its own Kubernetes resources.
+## Current AI Ops flow
 
-## Labs
+| Lab | Name | Status | Guide |
+|---|---|---|---|
+| 01 | Event-driven Incident Analyzer | Available | [English](01-event-driven-incident-analyzer/README.md) / [Sinhala](01-event-driven-incident-analyzer/README.si.md) |
+| 02 | AI Patch Recommendation | Available | [English](02-ai-patch-recommendation/README.md) / [Sinhala](02-ai-patch-recommendation/README.si.md) |
+| 03 | GitHub PR Remediation | Available | [English](03-github-pr-remediation/README.md) / [Sinhala](03-github-pr-remediation/README.si.md) |
 
-| Lab | Topic | Status |
-|---|---|---|
-| 01 | Event-driven Incident Analyzer | Available |
-| 02 | AI Patch Recommendation | Available |
-| 03 | GitHub PR Remediation | Available |
-| 04 | Alert Enrichment | Planned |
-| 05 | Canary Decision Support | Planned |
-| 06 | Security Finding Remediation | Planned |
-| 07 | FinOps Cost Analyzer | Planned |
-| 08 | Predictive Scaling Recommendations | Planned |
+## How the labs build up
 
-## Principles
+    Lab 01
+      Detect incident
+      Collect evidence
+      Ask Azure OpenAI for RCA
+      Write report to ConfigMap
+      Show report in dashboard
 
-- AI observes infrastructure events and evidence.
-- AI does not directly patch production workloads.
-- Fixes are recommended as GitOps-safe changes.
-- A human reviews the recommendation before changing Git.
-- Secrets are kept out of Git.
+    Lab 02
+      Everything from Lab 01
+      Add patch recommendation
+      Show unified diff
+      Keep manual GitOps apply mode
+
+    Lab 03
+      Everything from Lab 02
+      Create GitHub remediation branch
+      Open Pull Request
+      Human reviews and merges
+      Argo CD applies the fix
 
 ## Image usage
 
-The GitHub sample repository can be read or forked by learners.
+Each lab uses an immutable controller image tag.
 
-Docker Hub is different. Learners should not push images to the author's Docker Hub namespace.
+    Lab 01 -> docker.io/andrewferdi/aiops-controller:0.1.0
+    Lab 02 -> docker.io/andrewferdi/aiops-controller:0.2.0
+    Lab 03 -> docker.io/andrewferdi/aiops-controller:0.3.1
 
-Labs may provide two modes:
+Do not use latest in lab guides. Do not overwrite old lab image tags.
 
-- Fast path: use the author-tested public image.
-- Build path: build the image and push it to your own Docker Hub account.
+## Cleanup rule
 
+Each lab must clean the Kubernetes resources it creates or uses.
 
-## AI Ops Lab 03 - GitHub PR Remediation
-
-- [AI Ops Lab 03 - GitHub PR Remediation](03-github-pr-remediation/README.md)
-- [AI Ops Lab 03 - GitHub PR Remediation - Sinhala](03-github-pr-remediation/README.si.md)
-
-This lab shows the full safe remediation loop:
-
-```text
-AI detects issue -> AI opens PR -> human merges -> Argo CD fixes cluster
-```
+After a lab, the cluster should return to the minimal shared platform state. AI Ops lab namespaces such as aiops-system and incident-demo should not be left behind unless the next lab explicitly asks for them.

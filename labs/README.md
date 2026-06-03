@@ -113,13 +113,21 @@ Planned folders:
 
 ## AI Ops Labs
 
+AI Ops labs focus on safe AI-assisted operations for AKS.
+
 Current AI Ops flow:
 
-```text
-aiops/01-event-driven-incident-analyzer
-```
+    aiops/01-event-driven-incident-analyzer
+    aiops/02-ai-patch-recommendation
+    aiops/03-github-pr-remediation
 
-The AI Ops track integrates AI into AKS operations. The first lab deploys an event-driven controller that observes live Kubernetes incidents, collects evidence, calls Azure OpenAI, and recommends GitOps-safe fixes without directly patching workloads.
+The AI Ops track integrates AI into the platform workflow. It starts with incident analysis, then adds GitOps-safe patch recommendations, and then completes the loop with GitHub PR remediation.
+
+The safety model is:
+
+    AI detects issue -> AI recommends fix -> AI opens PR -> human merges -> Argo CD applies
+
+AI does not directly patch production workloads, and it does not auto-merge remediation PRs.
 
 ## Planned continuation
 
