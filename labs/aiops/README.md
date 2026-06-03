@@ -18,7 +18,7 @@ Each AI Ops lab still creates and cleans its own Kubernetes resources.
 | Lab | Topic | Status |
 |---|---|---|
 | 01 | Event-driven Incident Analyzer | Available |
-| 02 | AI Patch Recommendation | Planned |
+| 02 | AI Patch Recommendation | Available |
 | 03 | GitHub PR Remediation | Planned |
 | 04 | Alert Enrichment | Planned |
 | 05 | Canary Decision Support | Planned |
