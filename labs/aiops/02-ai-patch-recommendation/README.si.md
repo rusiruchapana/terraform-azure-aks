@@ -175,7 +175,7 @@ echo "$AIOPS_IMAGE"
 Continue කිරීමට පෙර shared Azure OpenAI setup guide එක follow කරන්න:
 
 ```text
-../AZURE_OPENAI_SETUP.si.md
+../../shared/azure-openai-setup.si.md
 ```
 
 Shared setup එක complete කළාට පසු ඔබගේ terminal එකේ මේ values තිබිය යුතුයි:
@@ -565,7 +565,7 @@ kubectl get pods -A | grep -E 'aiops|incident-demo' || true
 ඔබ Azure OpenAI resource එක AI Ops labs සඳහා පමණක් create කරලා තව labs continue නොකරනවා නම්, shared setup guide එකේ cloud cleanup section එක follow කරන්න:
 
 ```text
-../AZURE_OPENAI_SETUP.si.md
+../../shared/azure-openai-setup.si.md
 ```
 
 ## What you completed

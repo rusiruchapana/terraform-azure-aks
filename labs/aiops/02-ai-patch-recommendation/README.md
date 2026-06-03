@@ -175,7 +175,7 @@ This lab requires Azure OpenAI.
 Follow the shared Azure OpenAI setup guide before continuing:
 
 ```text
-../AZURE_OPENAI_SETUP.md
+../../shared/azure-openai-setup.md
 ```
 
 After completing the shared setup, your terminal must have these values:
@@ -565,7 +565,7 @@ kubectl get pods -A | grep -E 'aiops|incident-demo' || true
 If you created Azure OpenAI only for the AI Ops labs and you are not continuing, follow the cloud cleanup section in the shared setup guide:
 
 ```text
-../AZURE_OPENAI_SETUP.md
+../../shared/azure-openai-setup.md
 ```
 
 ## What you completed

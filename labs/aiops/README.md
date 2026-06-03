@@ -8,8 +8,8 @@ The goal is not to use AI as a chat assistant beside the platform. The goal is t
 
 Before running any AI Ops lab that calls Azure OpenAI, follow the shared setup guide:
 
-- [Azure OpenAI setup](AZURE_OPENAI_SETUP.md)
-- [Azure OpenAI setup - Sinhala](AZURE_OPENAI_SETUP.si.md)
+- [Azure OpenAI setup](../shared/azure-openai-setup.md)
+- [Azure OpenAI setup - Sinhala](../shared/azure-openai-setup.si.md)
 
 Each AI Ops lab still creates and cleans its own Kubernetes resources.
 
