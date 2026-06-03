@@ -19,7 +19,7 @@ Each AI Ops lab still creates and cleans its own Kubernetes resources.
 |---|---|---|
 | 01 | Event-driven Incident Analyzer | Available |
 | 02 | AI Patch Recommendation | Available |
-| 03 | GitHub PR Remediation | Planned |
+| 03 | GitHub PR Remediation | Available |
 | 04 | Alert Enrichment | Planned |
 | 05 | Canary Decision Support | Planned |
 | 06 | Security Finding Remediation | Planned |
@@ -44,3 +44,15 @@ Labs may provide two modes:
 
 - Fast path: use the author-tested public image.
 - Build path: build the image and push it to your own Docker Hub account.
+
+
+## AI Ops Lab 03 - GitHub PR Remediation
+
+- [AI Ops Lab 03 - GitHub PR Remediation](03-github-pr-remediation/README.md)
+- [AI Ops Lab 03 - GitHub PR Remediation - Sinhala](03-github-pr-remediation/README.si.md)
+
+This lab shows the full safe remediation loop:
+
+```text
+AI detects issue -> AI opens PR -> human merges -> Argo CD fixes cluster
+```
