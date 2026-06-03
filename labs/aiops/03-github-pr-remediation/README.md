@@ -672,7 +672,12 @@ grep -n "app:" k8s/incident/service.yaml
 git status
 ```
 
-If you created a temporary GitHub token only for this lab, revoke it from GitHub after the lab.
+GitHub cleanup:
+
+- Merge only the PR shown in the dashboard or report.
+- Close duplicate AIOps remediation PRs if any were created during testing.
+- Delete old `aiops-remediation/*` branches if you no longer need them.
+- If you created a temporary GitHub token only for this lab, revoke it from GitHub after the lab.
 
 If you created Azure OpenAI only for the AI Ops labs and you are not continuing, follow the cloud cleanup section in:
 

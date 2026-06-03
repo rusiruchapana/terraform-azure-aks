@@ -672,7 +672,12 @@ grep -n "app:" k8s/incident/service.yaml
 git status
 ```
 
-ඔබ temporary GitHub token එකක් create කළා නම් lab එකෙන් පස්සේ GitHub UI එකෙන් revoke කරන්න.
+GitHub cleanup:
+
+- Dashboard/report එකේ පෙන්වන PR එක විතරක් merge කරන්න.
+- Testing අතරතුර duplicate AIOps remediation PRs create වුණා නම් ඒවා GitHub UI එකෙන් close කරන්න.
+- අවශ්‍ය නැති `aiops-remediation/*` branches delete කරන්න.
+- මෙම lab එකට temporary GitHub token එකක් create කළා නම්, lab එකෙන් පස්සේ GitHub UI එකෙන් revoke කරන්න.
 
 ඔබ Azure OpenAI resource එක AI Ops labs සඳහා පමණක් create කරලා තව labs continue නොකරනවා නම්, shared setup guide එකේ cloud cleanup section එක follow කරන්න:
 
