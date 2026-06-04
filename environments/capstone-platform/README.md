@@ -36,6 +36,32 @@ The capstone profile uses:
 
 If more capacity is needed during load testing, change the user node VM size to `Standard_D4s_v5`.
 
+## Backend state
+
+This repo ignores environment backend files.
+
+Before running `terraform init`, create a local `backend.tf` for this environment. You can copy the dev backend file and change only the state key.
+
+The capstone platform backend key must be:
+
+    capstone-platform/aks-platform.tfstate
+
+Do not reuse the dev backend key.
+
+Example local backend file:
+
+    terraform {
+      backend "azurerm" {
+        resource_group_name  = "rg-tfstate-dev-001"
+        storage_account_name = "sttfstateaksdev001"
+        container_name       = "tfstate"
+        key                  = "capstone-platform/aks-platform.tfstate"
+        use_azuread_auth     = true
+      }
+    }
+
+Do not commit `backend.tf`.
+
 ## How to use
 
 Copy the example tfvars file:
