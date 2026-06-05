@@ -269,15 +269,19 @@ Expected subject pattern:
 
 ## GitHub CLI setup
 
-This guide uses GitHub CLI to set GitHub Actions secrets and variables.
+This guide uses GitHub CLI to set GitHub Actions secrets and variables from the terminal.
+
+GitHub CLI supports macOS, Windows, and Linux.
+
+Official installation page:
+
+    https://github.com/cli/cli#installation
+
+Install GitHub CLI using the official instructions for your operating system.
 
 Check whether gh is installed:
 
     gh --version
-
-If gh is not installed on macOS:
-
-    brew install gh
 
 Login:
 
@@ -297,6 +301,8 @@ Verify login:
 Expected:
 
     Logged in to github.com
+
+If you do not want to use GitHub CLI, you can add the same secrets and variables using the GitHub UI. That option is shown below.
 
 ## GitHub Secrets and Variables
 
