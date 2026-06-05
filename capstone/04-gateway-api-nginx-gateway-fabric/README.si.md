@@ -264,3 +264,63 @@ Actual application traffic path එක Gateway resource එක හරහා expo
     20.53.203.159
 
 පස්සේ capstone app එක deploy කළාම HTTPRoute එකක් create කරලා app traffic මේ Gateway හරහා route කරනවා.
+
+## Issue checked during this stage
+
+NGINX Gateway Fabric install කළාට පස්සේ `nginx-gateway` namespace එකේ service එක `ClusterIP` ලෙස පෙනුණා.
+
+මුලින් ඒක external traffic path එක missing වගේ පෙනුණා.
+
+නමුත් NGINX Gateway Fabric model එකේ controller service එක ClusterIP වීම normal.
+
+Gateway API model එකේ external address එක Gateway resource එක create වුණාම assign වෙනවා.
+
+මෙම command එකෙන් Gateway එක verify කළා:
+
+    kubectl get gateway -n platform-gateway -o wide
+
+Result එකේ `ADDRESS` value එක තිබුණා:
+
+    20.53.203.159
+
+Gateway status:
+
+    Accepted=True
+    Programmed=True
+
+Listener status:
+
+    Accepted=True
+    Programmed=True
+    ResolvedRefs=True
+    Conflicted=False
+
+ඒ කියන්නේ Gateway layer එක traffic receive කරන්න ready.
+
+## Important verification lesson
+
+Gateway controller pod Running කියලා විතරක් ප්‍රමාණවත් නැහැ.
+
+Gateway layer verify කරනකොට මේවා බලන්න ඕන:
+
+- Gateway API CRDs installed ද?
+- NGINX Gateway Fabric pod Running ද?
+- GatewayClass Accepted ද?
+- Gateway resource Programmed ද?
+- Gateway ADDRESS assign වෙලාද?
+- Listener Accepted/Programmed ද?
+- Conflicted=False ද?
+
+## Why the controller service is ClusterIP
+
+`ngf-nginx-gateway-fabric` service එක ClusterIP වුණාට ඒක issue එකක් නෙවෙයි.
+
+ඒ service එක controller/agent internal communication සඳහා use වෙනවා.
+
+Actual application traffic path එක Gateway resource එක හරහා expose වෙනවා.
+
+මෙම project එකේ external Gateway address:
+
+    20.53.203.159
+
+පස්සේ capstone app එක deploy කළාම HTTPRoute එකක් create කරලා app traffic මේ Gateway හරහා route කරනවා.
