@@ -79,7 +79,7 @@ Reason:
 
 ## Step 1 - App repo එකට යන්න
 
-    cd /Users/andrewferdinandus/projcts/aks-capstone-store-app
+    cd <your-local-path>/aks-capstone-store-app
 
 Check git status:
 
@@ -200,7 +200,7 @@ Production meaning:
 
 GitOps repo එකට යන්න:
 
-    cd /Users/andrewferdinandus/projcts/aks-capstone-gitops
+    cd <your-local-path>/aks-capstone-gitops
 
 Original image:
 
@@ -224,7 +224,7 @@ Expected store-front line:
 
 ## Step 9 - Kustomize render and dry-run
 
-    cd /Users/andrewferdinandus/projcts/aks-capstone-gitops/apps/capstone-store/base
+    cd <your-local-path>/aks-capstone-gitops/apps/capstone-store/base
 
 Render check:
 
@@ -236,7 +236,7 @@ Server dry-run:
 
 If dry-run success, commit and push:
 
-    cd /Users/andrewferdinandus/projcts/aks-capstone-gitops
+    cd <your-local-path>/aks-capstone-gitops
 
     git status
 
@@ -335,7 +335,7 @@ Fix:
 
 Commands:
 
-    cd /Users/andrewferdinandus/projcts/aks-capstone-store-app
+    cd <your-local-path>/aks-capstone-store-app
 
     export ACR_NAME="acrakscapstoneae9954"
     export ACR_LOGIN_SERVER="acrakscapstoneae9954.azurecr.io"
