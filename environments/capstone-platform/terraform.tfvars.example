@@ -13,23 +13,23 @@
 # In a real enterprise setup, dev, qa, and prod may use separate clusters,
 # subscriptions, or landing zones. This capstone uses one cluster to keep cost lower.
 
-resource_group_name = "rg-aks-capstone-platform-001"
-location            = "eastus"
+resource_group_name = "rg-aks-capstone-ae-001"
+location            = "australiaeast"
 
-vnet_name                   = "vnet-aks-capstone-platform-001"
+vnet_name                   = "vnet-aks-capstone-ae-001"
 vnet_address_space          = ["10.50.0.0/16"]
-aks_subnet_name             = "snet-aks-capstone-platform-001"
-aks_subnet_address_prefixes = ["10.50.1.0/23"]
+aks_subnet_name             = "snet-aks-capstone-ae-001"
+aks_subnet_address_prefixes = ["10.50.0.0/23"]
 
 enable_nat_gateway                  = true
-nat_gateway_name                    = "ngw-aks-capstone-platform-001"
-nat_gateway_public_ip_name          = "pip-ngw-aks-capstone-platform-001"
+nat_gateway_name                    = "ngw-aks-capstone-ae-001"
+nat_gateway_public_ip_name          = "pip-ngw-aks-capstone-ae-001"
 nat_gateway_idle_timeout_in_minutes = 4
 
-aks_identity_name = "id-aks-capstone-platform-001"
+aks_identity_name = "id-aks-capstone-ae-001"
 
-aks_cluster_name            = "aks-capstone-platform-001"
-aks_dns_prefix              = "aks-capstone-platform-001"
+aks_cluster_name            = "aks-capstone-ae-001"
+aks_dns_prefix              = "aks-capstone-ae-001"
 aks_kubernetes_version      = null
 aks_private_cluster_enabled = false
 
@@ -48,8 +48,8 @@ system_node_temporary_name_for_rotation  = "syspooltmp"
 # If the capstone load test needs more capacity, change user_node_vm_size to Standard_D4s_v5.
 user_node_pool_name       = "user"
 user_node_vm_size         = "Standard_D2s_v5"
-user_node_min_count       = 2
-user_node_max_count       = 5
+user_node_min_count       = 1
+user_node_max_count       = 2
 user_node_os_disk_size_gb = 128
 
 user_node_labels = {
@@ -74,10 +74,10 @@ keyvault_public_network_access_enabled = true
 # the capstone app to read secrets from Key Vault.
 enable_workload_identity_keyvault_access = true
 
-app_workload_identity_name             = "id-capstone-app-kv-001"
+app_workload_identity_name             = "id-capstone-app-kv-ae-001"
 app_workload_namespace                 = "capstone-prod"
 app_workload_service_account_name      = "capstone-api-sa"
-app_federated_identity_credential_name = "fic-capstone-api-kv"
+app_federated_identity_credential_name = "fic-capstone-api-kv-ae"
 
 tags = {
   environment = "capstone-platform"
