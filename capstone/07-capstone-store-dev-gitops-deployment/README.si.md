@@ -127,59 +127,6 @@ aks-capstone-store-app repo එකෙන් quickstart manifest එක ගන්
       applications/
         capstone-store-dev.yaml
 
-## Base manifest
-
-Base manifest එක original app repo එකෙන් copy කළා:
-
-    aks-store-quickstart.yaml
-
-මෙහි resources:
-
-- rabbitmq ConfigMap
-- rabbitmq StatefulSet
-- rabbitmq Service
-- order-service Deployment
-- order-service Service
-- product-service Deployment
-- product-service Service
-- store-front Deployment
-- store-front Service
-
-## Dev overlay
-
-Dev overlay එකෙන් resources capstone-dev namespace එකට deploy වෙනවා.
-
-Dev overlay එකට app labels add කරනවා:
-
-    app.kubernetes.io/part-of: capstone-store
-    environment: dev
-
-මෙම labels debugging, filtering, monitoring, and future AIOps evidence collection සඳහා useful.
-
-## HTTPRoute
-
-Application එක expose කරන්නේ direct LoadBalancer service එකකින් නෙවෙයි.
-
-Expose කරන්නේ Gateway API හරහා.
-
-Flow:
-
-Internet
-→ platform-gateway
-→ HTTPRoute
-→ store-front Service
-→ store-front Pod
-
-HTTPRoute එක:
-
-    parentRefs:
-      - name: platform-gateway
-        namespace: platform-gateway
-
-    backendRefs:
-      - name: store-front
-        port: 80
-
 ## Store-front Service ClusterIP fix
 
 Original quickstart manifest එකේ store-front service එක LoadBalancer ලෙස තිබුණා.
@@ -238,49 +185,6 @@ Fix එක ලෙස dev kustomization එකේ labels transformer එක updat
 Final result:
 
     capstone-store-dev = Synced / Healthy
-
-## Commands used in this stage
-
-Quickstart manifest copy කිරීම:
-
-    cp /Users/andrewferdinandus/projcts/aks-capstone-store-app/aks-store-quickstart.yaml \
-      apps/capstone-store/base/aks-store-quickstart.yaml
-
-Base kustomization:
-
-    resources:
-      - aks-store-quickstart.yaml
-
-Dev overlay:
-
-    namespace: capstone-dev
-
-    resources:
-      - ../../base
-      - httproute-store-front.yaml
-
-    labels:
-      - includeSelectors: true
-        includeTemplates: true
-        pairs:
-          app.kubernetes.io/part-of: capstone-store
-          environment: dev
-
-    patches:
-      - path: patch-store-front-service.yaml
-
-Argo CD Application apply කිරීම:
-
-    kubectl apply -f argocd/applications/capstone-store-dev.yaml
-
-Argo CD refresh/sync කිරීම:
-
-    kubectl annotate application capstone-store-dev -n argocd \
-      argocd.argoproj.io/refresh=hard \
-      --overwrite
-
-    kubectl patch application capstone-store-dev -n argocd --type merge \
-      -p '{"operation":{"sync":{"revision":"main"}}}'
 
 ## Verification commands
 
