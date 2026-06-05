@@ -71,11 +71,57 @@ Platform/Terraform repo:
 
 ඒවා next stages වලදී add කරනවා.
 
+## Required values gather කිරීම
+
+මේ stage එකේදී GitHub Actions workflow එකට Azure සහ ACR details කිහිපයක් අවශ්‍ය වෙනවා.
+
+Learner තමන්ගේ environment එකට අනුව values set කරගන්න ඕන.
+
+App repo එකට යන්න:
+
+    cd <local-path>/aks-capstone-store-app
+
+Azure account check කරන්න:
+
+    az account show -o table
+
+ACR details set කරන්න:
+
+    export ACR_NAME="<your-acr-name>"
+    export ACR_LOGIN_SERVER="$(az acr show --name $ACR_NAME --query loginServer -o tsv)"
+
+Azure subscription and tenant values get කරන්න:
+
+    export AZURE_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+    export AZURE_TENANT_ID="$(az account show --query tenantId -o tsv)"
+
+GitHub repo values set කරන්න:
+
+    export GITHUB_ORG="<your-github-username-or-org>"
+    export GITHUB_REPO="aks-capstone-store-app"
+
+Azure app registration name:
+
+    export APP_NAME="github-actions-acr-capstone-store-app"
+
+Verify values:
+
+    echo "ACR name: $ACR_NAME"
+    echo "ACR login server: $ACR_LOGIN_SERVER"
+    echo "Azure subscription: $AZURE_SUBSCRIPTION_ID"
+    echo "Azure tenant: $AZURE_TENANT_ID"
+    echo "GitHub repo: $GITHUB_ORG/$GITHUB_REPO"
+
+Important:
+
+    ACR_LOGIN_SERVER manually guess කරන්න එපා.
+    az acr show command එකෙන් get කරන එක safer.
+
+Example image pattern:
+
+    <your-acr-login-server>/store-front:stage11-v1
+
 ## Target image
-
-ACR login server:
-
-    <your-acr-login-server>
 
 Image name:
 
@@ -130,6 +176,22 @@ Example meaning:
     Only main branch
     Can request Azure token through OIDC
 
+Create Azure App Registration:
+
+    az ad app create --display-name "$APP_NAME"
+
+Get client ID:
+
+    export AZURE_CLIENT_ID="$(az ad app list --display-name "$APP_NAME" --query '[0].appId' -o tsv)"
+
+Create Service Principal:
+
+    az ad sp create --id "$AZURE_CLIENT_ID"
+
+If Service Principal already exists, that is okay. Verify:
+
+    az ad sp show --id "$AZURE_CLIENT_ID" -o table
+
 ## AcrPush permission
 
 GitHub Actions image push කරන්න ACR permission ඕන.
@@ -142,15 +204,99 @@ Scope:
 
     Azure Container Registry resource
 
+Get ACR resource ID:
+
+    export ACR_ID="$(az acr show --name "$ACR_NAME" --query id -o tsv)"
+
+Assign AcrPush:
+
+    az role assignment create \
+      --assignee "$AZURE_CLIENT_ID" \
+      --role AcrPush \
+      --scope "$ACR_ID"
+
+Verify role assignment:
+
+    az role assignment list \
+      --assignee "$AZURE_CLIENT_ID" \
+      --scope "$ACR_ID" \
+      --query "[].{role:roleDefinitionName, principalId:principalId}" \
+      -o table
+
 Meaning:
 
     GitHub Actions identity can push images to ACR.
-
-It does not need full subscription owner access.
+    It does not need full subscription owner access.
 
 Good security practice:
 
     Give least privilege only.
+
+## GitHub OIDC federated credential
+
+Create OIDC credential file:
+
+    cat > /tmp/github-oidc-credential.json <<EOF
+    {
+      "name": "github-actions-main-branch",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "subject": "repo:${GITHUB_ORG}/${GITHUB_REPO}:ref:refs/heads/main",
+      "description": "GitHub Actions OIDC for ${GITHUB_ORG}/${GITHUB_REPO} main branch",
+      "audiences": [
+        "api://AzureADTokenExchange"
+      ]
+    }
+    EOF
+
+Create federated credential:
+
+    az ad app federated-credential create \
+      --id "$AZURE_CLIENT_ID" \
+      --parameters /tmp/github-oidc-credential.json
+
+If it already exists, that is okay.
+
+Verify:
+
+    az ad app federated-credential list \
+      --id "$AZURE_CLIENT_ID" \
+      --query "[].{name:name, subject:subject, issuer:issuer}" \
+      -o table
+
+Expected subject pattern:
+
+    repo:<github-owner>/<repo-name>:ref:refs/heads/main
+
+## GitHub CLI setup
+
+This guide uses GitHub CLI to set GitHub Actions secrets and variables.
+
+Check whether gh is installed:
+
+    gh --version
+
+If gh is not installed on macOS:
+
+    brew install gh
+
+Login:
+
+    gh auth login
+
+Recommended choices:
+
+    GitHub.com
+    HTTPS
+    Authenticate Git with GitHub credentials: Yes
+    Login with a web browser
+
+Verify login:
+
+    gh auth status
+
+Expected:
+
+    Logged in to github.com
 
 ## GitHub Secrets and Variables
 
@@ -175,23 +321,15 @@ Difference:
       non-secret configuration values
       easier to view and manage
 
-## GitHub CLI setup
+## Set GitHub secrets using CLI
 
-GitHub CLI was installed and authenticated.
+These commands add values to the current GitHub repo.
 
-Check:
+Run from the app repo:
 
-    gh auth status
+    cd <local-path>/aks-capstone-store-app
 
-Expected:
-
-    Logged in to github.com
-
-This allows us to set GitHub Actions secrets and variables from terminal.
-
-## Set GitHub secrets
-
-Commands:
+Set secrets:
 
     gh secret set AZURE_CLIENT_ID --body "$AZURE_CLIENT_ID"
     gh secret set AZURE_TENANT_ID --body "$AZURE_TENANT_ID"
@@ -207,9 +345,9 @@ Expected:
     AZURE_SUBSCRIPTION_ID
     AZURE_TENANT_ID
 
-## Set GitHub variables
+## Set GitHub variables using CLI
 
-Commands:
+Set variables:
 
     gh variable set ACR_NAME --body "$ACR_NAME"
     gh variable set ACR_LOGIN_SERVER --body "$ACR_LOGIN_SERVER"
@@ -222,6 +360,81 @@ Expected:
 
     ACR_NAME
     ACR_LOGIN_SERVER
+
+## Alternative - Set secrets and variables using GitHub UI
+
+If GitHub CLI is not available, use the GitHub UI.
+
+Go to the app repo in GitHub:
+
+    Settings
+        -> Secrets and variables
+        -> Actions
+
+Add secrets under Secrets tab:
+
+    AZURE_CLIENT_ID
+    AZURE_TENANT_ID
+    AZURE_SUBSCRIPTION_ID
+
+Add variables under Variables tab:
+
+    ACR_NAME
+    ACR_LOGIN_SERVER
+
+Use terminal echo commands to copy the correct values:
+
+    echo $AZURE_CLIENT_ID
+    echo $AZURE_TENANT_ID
+    echo $AZURE_SUBSCRIPTION_ID
+    echo $ACR_NAME
+    echo $ACR_LOGIN_SERVER
+
+Important:
+
+    Secrets and variables are added to the app repo.
+    In this stage, that repo is aks-capstone-store-app.
+
+## View and run GitHub Actions pipeline
+
+Using GitHub UI:
+
+    Repository
+        -> Actions
+        -> Build store-front image to ACR
+        -> Run workflow
+        -> image_tag = stage11-v1
+
+Using GitHub CLI:
+
+    gh workflow list
+
+Run workflow:
+
+    gh workflow run "Build store-front image to ACR" -f image_tag=stage11-v1
+
+View latest runs:
+
+    gh run list --limit 5
+
+Watch running workflow:
+
+    gh run watch
+
+View a specific run:
+
+    gh run view <run-id>
+
+After success, verify ACR tag:
+
+    az acr repository show-tags \
+      --name $ACR_NAME \
+      --repository store-front \
+      -o table
+
+Expected:
+
+    stage11-v1
 
 ## Inherited upstream workflows issue
 
