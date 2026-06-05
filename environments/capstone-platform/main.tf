@@ -72,6 +72,14 @@ module "aks" {
   user_node_os_disk_size_gb = var.user_node_os_disk_size_gb
   user_node_labels          = var.user_node_labels
 
+  enable_apps_node_pool     = var.enable_apps_node_pool
+  apps_node_pool_name       = var.apps_node_pool_name
+  apps_node_vm_size         = var.apps_node_vm_size
+  apps_node_min_count       = var.apps_node_min_count
+  apps_node_max_count       = var.apps_node_max_count
+  apps_node_os_disk_size_gb = var.apps_node_os_disk_size_gb
+  apps_node_labels          = var.apps_node_labels
+
   oidc_issuer_enabled       = var.aks_oidc_issuer_enabled
   workload_identity_enabled = var.aks_workload_identity_enabled
 

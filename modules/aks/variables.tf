@@ -143,3 +143,44 @@ variable "workload_identity_enabled" {
   type        = bool
   default     = true
 }
+variable "enable_apps_node_pool" {
+  description = "Whether to create an additional apps workload node pool."
+  type        = bool
+  default     = false
+}
+
+variable "apps_node_pool_name" {
+  description = "Name of the apps workload node pool."
+  type        = string
+  default     = "apps"
+}
+
+variable "apps_node_vm_size" {
+  description = "VM size for the apps workload node pool."
+  type        = string
+  default     = "Standard_D2_v4"
+}
+
+variable "apps_node_min_count" {
+  description = "Minimum number of nodes for apps node pool autoscaling."
+  type        = number
+  default     = 1
+}
+
+variable "apps_node_max_count" {
+  description = "Maximum number of nodes for apps node pool autoscaling."
+  type        = number
+  default     = 2
+}
+
+variable "apps_node_os_disk_size_gb" {
+  description = "OS disk size in GB for apps node pool nodes."
+  type        = number
+  default     = 128
+}
+
+variable "apps_node_labels" {
+  description = "Labels for the apps workload node pool."
+  type        = map(string)
+  default     = {}
+}

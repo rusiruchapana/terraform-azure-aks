@@ -84,3 +84,19 @@ tags = {
   project     = "aks-platform-capstone"
   managed_by  = "terraform"
 }
+
+# Additional apps workload node pool.
+# This is useful for running the capstone application workloads separately from platform/system workloads.
+# In Azure Free Trial, 4 vCPU quota may not be enough for the full capstone.
+# Recommended: upgrade to Pay-As-You-Go with budget guardrails before enabling the full workload.
+enable_apps_node_pool     = true
+apps_node_pool_name       = "apps"
+apps_node_vm_size         = "Standard_D2_v4"
+apps_node_min_count       = 1
+apps_node_max_count       = 2
+apps_node_os_disk_size_gb = 128
+
+apps_node_labels = {
+  workload = "apps"
+  project  = "aks-capstone"
+}
