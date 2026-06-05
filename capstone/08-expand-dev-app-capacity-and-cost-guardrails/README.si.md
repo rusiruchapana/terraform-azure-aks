@@ -1,548 +1,398 @@
-# Stage 08 - Dev App Expansion, Capacity Planning, Pay-As-You-Go, and Terraform Import
+# Stage 08 - Dev App Capacity, Azure Quota, Cost Guardrails, and Terraform Drift Fix
 
 ## මේ stage එකේදී මොකක්ද කරන්නේ?
 
-මෙම stage එකේදී Capstone Store dev app එක minimal setup එකෙන් තවත් real-world workload එකකට expand කරනවා.
+මේ stage එකේදී අපි Capstone Store dev application එක expand කළාට පස්සේ ආපු real-world capacity issue එක fix කරනවා.
 
-කලින් dev app එකේ තිබුණේ:
+මුලින් app එකේ services ටික වැඩි කළා:
 
 - store-front
 - product-service
 - order-service
 - rabbitmq
-
-මෙම stage එකේදී add කරනවා:
-
 - mongodb
 - makeline-service
 
-මේකෙන් app එක event-driven microservices flow එකකට යනවා:
+නමුත් cluster එකේ node capacity මදි වුණා. ඒ නිසා MongoDB pod එක Pending වුණා. MongoDB නැතුව makeline-service එකත් හරියට start වෙන්න බැරි වුණා.
+
+මේක production වලට ගොඩක් common problem එකක්.
+
+සරලව කියනවා නම්:
 
 ```text
-store-front
-→ order-service
-→ rabbitmq
-→ makeline-service
-→ mongodb
+Application එක ලොකු වුණා
+        ↓
+Pods වැඩි වුණා
+        ↓
+Current node capacity මදි වුණා
+        ↓
+MongoDB Pending වුණා
+        ↓
+Dependent service fail වුණා
+        ↓
+New node pool එකක් add කරන්න වුණා
+        ↓
+CLI එකෙන් add කළ node pool එක Terraform වලට import කරන්න වුණා
 ```
 
-මෙම stage එක application deployment එකක් විතරක් නෙවෙයි. මෙතන අපිට real cloud engineering issue එකක් ආවා:
+මේ stage එකෙන් අපි ඉගෙන ගන්න ප්‍රධාන දේවල්:
 
-- MongoDB pod එක Pending වුණා
-- makeline-service එක CrashLoopBackOff වුණා
-- root cause එක app bug එකක් නෙවෙයි
-- root cause එක cluster capacity / Azure quota limitation එකක්
-
-ඊට පස්සේ අපි issue එක troubleshoot කරලා, Free Trial quota limitation identify කරලා, Pay-As-You-Go upgrade කරලා, budget guardrails දාලා, correct VM family choose කරලා, apps node pool add කරලා, app healthy කරලා, manual node pool එක Terraform state/config වලට import කළා.
+1. Azure Free Trial quota limitation එක production planning වලට බලපාන විදිහ
+2. Pay-As-You-Go upgrade එකක් අවශ්‍ය වෙන අවස්ථා
+3. Budget guardrail එකක් දාලා cost risk අඩු කරන විදිහ
+4. AKS node pool එකක් add කරලා pod capacity issue එක fix කරන විදිහ
+5. CLI එකෙන් හදපු resource එක Terraform state එකට import කරලා drift fix කරන විදිහ
 
 ---
 
-## Repo path setup
+## මේ stage එක වැදගත් ඇයි?
 
-මෙම guide එකේ commands run කරන්න කලින් local repo paths variables ලෙස set කරගන්න.
+Kubernetes cluster එකක් හදලා app එක deploy කරන එක විතරක් production engineering නෙවෙයි.
 
-ඔබේ machine එකේ path වෙනස් නම් මේ values වෙනස් කරන්න.
+Production වලදී app එක grow වෙනවා. Services වැඩි වෙනවා. Database, queue, background workers, admin UI වගේ components එකතු වෙනවා.
 
-```bash
-export PLATFORM_REPO="$HOME/projcts/terraform-azure-aks"
-export GITOPS_REPO="$HOME/projcts/aks-capstone-gitops"
-export APP_REPO="$HOME/projcts/aks-capstone-store-app"
-```
+ඒ වෙලාවට cluster එකට ප්‍රශ්න එන්න පුළුවන්:
 
-Repos තුනේ meaning එක:
+- pod schedule වෙන්නේ නැහැ
+- node වල CPU/memory මදි වෙනවා
+- cloud quota මදි වෙනවා
+- new VM size එකක් create කරන්න Azure allow කරන්නේ නැහැ
+- manually fix කළ resource Terraform වලින් manage නොවෙයි
+- Terraform apply එකකදී drift හෝ conflict එන්න පුළුවන්
 
-```text
-PLATFORM_REPO = Terraform / platform guides repo
-GITOPS_REPO   = Kubernetes manifests / Argo CD repo
-APP_REPO      = Capstone Store application source repo
-```
+ඒ නිසා මේ stage එක beginner command lab එකක් නෙවෙයි. මේක real platform engineering lesson එකක්.
 
 ---
 
-## Part 1 - Add MongoDB and makeline-service to GitOps
+## Current platform status
 
-### 1.1 Extract MongoDB and makeline-service manifests
+මේ stage එකේදී platform එක මේ වගේ status එකක තිබුණා:
 
-App source repo එකේ full manifest එකෙන් MongoDB සහ makeline-service resources extract කරනවා.
-
-```bash
-cd "$GITOPS_REPO"
-
-python3 - <<'EXTRACT_MONGO_MAKELINE'
-from pathlib import Path
-import os
-import re
-
-app_repo = Path(os.environ["APP_REPO"])
-gitops_repo = Path(os.environ["GITOPS_REPO"])
-
-src = app_repo / "aks-store-all-in-one.yaml"
-out = gitops_repo / "apps/capstone-store/base/makeline-mongodb.yaml"
-
-text = src.read_text()
-docs = re.split(r"\n---\s*\n", text)
-
-wanted = {
-    ("StatefulSet", "mongodb"),
-    ("Service", "mongodb"),
-    ("Deployment", "makeline-service"),
-    ("Service", "makeline-service"),
-}
-
-selected = []
-
-for doc in docs:
-    kind_match = re.search(r"(?m)^kind:\s*(\S+)\s*$", doc)
-    name_match = re.search(r"(?m)^metadata:\s*\n(?:[^\n]*\n)*?\s{2}name:\s*([A-Za-z0-9-]+)\s*$", doc)
-
-    if not kind_match or not name_match:
-        continue
-
-    kind = kind_match.group(1)
-    name = name_match.group(1)
-
-    if (kind, name) in wanted:
-        selected.append(doc.strip())
-
-if len(selected) != 4:
-    raise SystemExit(f"Expected 4 resources, found {len(selected)}")
-
-out.write_text("---\n" + "\n---\n".join(selected) + "\n")
-print(f"Wrote {len(selected)} resources to {out}")
-EXTRACT_MONGO_MAKELINE
+```text
+Region: australiaeast
+Resource group: rg-aks-capstone-ae-001
+AKS cluster: aks-capstone-ae-001
+ACR: acrakscapstoneae9954.azurecr.io
+Key Vault: kv-aks-capstone-ae9954
+Gateway external IP: http://20.53.203.159
 ```
 
-### 1.2 Update base kustomization
+Gateway test එක:
 
 ```bash
-cd "$GITOPS_REPO"
-
-cat > apps/capstone-store/base/kustomization.yaml <<'EOF_KUSTOMIZE'
-resources:
-  - aks-store-quickstart.yaml
-  - makeline-mongodb.yaml
-EOF_KUSTOMIZE
+curl -I http://20.53.203.159
 ```
 
-### 1.3 Validate Kustomize output
+Expected result:
 
-මෙම command එක **GitOps repo** එකේ run කරන්න ඕන.
-
-```bash
-cd "$GITOPS_REPO"
-
-kubectl kustomize apps/capstone-store/overlays/dev | grep -nE 'kind: StatefulSet|kind: Deployment|kind: Service|name: mongodb|name: makeline-service|ORDER_DB_URI|ORDER_QUEUE_URI|image:|containerPort:|type: ClusterIP' -A10 | head -220
-```
-
-### 1.4 Commit and push GitOps change
-
-```bash
-cd "$GITOPS_REPO"
-
-git status --short
-
-git add apps/capstone-store/base/kustomization.yaml \
-  apps/capstone-store/base/makeline-mongodb.yaml
-
-git commit -m "Add MongoDB and makeline service to dev workload"
-git push
-```
-
-### 1.5 Sync Argo CD application
-
-```bash
-kubectl annotate application capstone-store-dev -n argocd \
-  argocd.argoproj.io/refresh=hard \
-  --overwrite
-
-kubectl patch application capstone-store-dev -n argocd --type merge \
-  -p '{"operation":{"sync":{"revision":"main"}}}'
+```text
+HTTP/1.1 200 OK
 ```
 
 ---
 
-## Part 2 - Verify the issue
+## Problem එක මොකක්ද?
 
-### 2.1 Check Argo CD and pods
+Dev app එක expand කළාට පස්සේ MongoDB pod එක Pending වුණා.
 
-```bash
-kubectl get application capstone-store-dev -n argocd -o wide
-kubectl get all -n capstone-dev
-```
-
-Possible issue:
-
-```text
-capstone-store-dev   Synced   Progressing
-mongodb-0            Pending
-makeline-service     CrashLoopBackOff
-```
-
-Important:
-
-```text
-Argo CD Synced = Git desired state cluster එකට apply වෙලා
-Argo CD Progressing = workload health තව ready නැහැ
-```
-
-### 2.2 Check MongoDB pod details
+Check කරන්න:
 
 ```bash
-kubectl describe pod mongodb-0 -n capstone-dev
+kubectl get pods -n capstone-store-dev -o wide
 ```
 
-Observed event:
+Problem එකේදී MongoDB මේ වගේ පේන්න පුළුවන්:
 
 ```text
-0/2 nodes are available:
-1 Too many pods,
-1 node(s) had untolerated taint(s)
+mongodb   0/1   Pending
 ```
 
-Meaning:
-
-- system node එක critical system workloads සඳහා tainted
-- app pods system node එකට schedule වෙන්නේ නැහැ
-- user node එකේ pod capacity full
-- MongoDB schedule වෙන්න තැනක් නැහැ
-
-### 2.3 Check makeline-service
+Pod එක Pending නම් describe කරන්න:
 
 ```bash
-kubectl describe pod -n capstone-dev -l app=makeline-service | tail -180
-
-kubectl logs -n capstone-dev deployment/makeline-service --tail=120 || true
-kubectl logs -n capstone-dev deployment/makeline-service --previous --tail=120 || true
+kubectl describe pod -n capstone-store-dev -l app=mongodb
 ```
 
-makeline-service MongoDB connect වෙන්න try කරනවා. MongoDB Pending නිසා service එක Ready වෙන්නේ නැහැ.
+Typical reason එක:
+
+```text
+Insufficient cpu
+Insufficient memory
+No nodes are available that match all of the predicates
+```
+
+මෙහි සරල meaning එක:
+
+Cluster එකේ available nodes වල MongoDB pod එක run කරන්න අවශ්‍ය resources නැහැ.
 
 ---
 
-## Part 3 - Check Azure quota before scaling
+## මේක app bug එකක්ද platform capacity issue එකක්ද?
 
-### 3.1 Check current node pools
+මෙතන වැදගත්ම thinking එක මෙන්න මේකයි.
 
-```bash
-az aks nodepool list \
-  --cluster-name aks-capstone-ae-001 \
-  --resource-group rg-aks-capstone-ae-001 \
-  --query '[].{name:name,count:count,minCount:minCount,maxCount:maxCount,vmSize:vmSize,mode:mode,enableAutoScaling:enableAutoScaling,powerState:powerState.code}' \
-  -o table
-```
+MongoDB image එක වැරදි නැහැ. Kubernetes manifest එකත් වැරදි නැහැ. Argo CD sync එකත් success වුණා.
 
-Initial node pools:
+නමුත් pod එක schedule වෙන්නේ නැහැ.
+
+ඒ කියන්නේ problem එක app code එකේ නෙවෙයි. Problem එක cluster capacity එකේ.
+
+Production troubleshooting වලදී මේ වෙනස හඳුනාගන්න පුළුවන් වීම ගොඩක් වැදගත්.
 
 ```text
-system  Standard_D2s_v5  count 1
-user    Standard_D2s_v5  count 1
+App bug:
+  Pod start වෙනවා, නමුත් application crash වෙනවා.
+
+Capacity issue:
+  Pod start වෙන්නම node එකක් නැහැ.
 ```
 
-### 3.2 Try scaling user node pool
+---
 
-If cluster autoscaler is enabled, this command can fail:
+## Azure quota check කිරීම
 
-```bash
-az aks nodepool scale \
-  --resource-group rg-aks-capstone-ae-001 \
-  --cluster-name aks-capstone-ae-001 \
-  --name user \
-  --node-count 2
-```
+Azure වල VM create කරන්න quota තියෙන්න ඕන.
 
-Observed error:
+Free Trial එකේ quota අඩුයි. මේ project එකේදී මුලින් Total Regional vCPU quota එක 4/4 වගේ limit එකකට ගිහින් තිබුණා.
 
-```text
-Cannot scale cluster autoscaler enabled node pool.
-```
-
-Correct method is updating autoscaler min/max:
-
-```bash
-az aks nodepool update \
-  --resource-group rg-aks-capstone-ae-001 \
-  --cluster-name aks-capstone-ae-001 \
-  --name user \
-  --update-cluster-autoscaler \
-  --min-count 2 \
-  --max-count 2
-```
-
-But in Free Trial this can fail with quota issue:
-
-```text
-ErrCode_InsufficientVCPUQuota
-left regional vcpu quota 0
-```
-
-### 3.3 Check quota
+Quota බලන්න:
 
 ```bash
 az vm list-usage \
   --location australiaeast \
-  --query "[?name.localizedValue=='Total Regional vCPUs' || name.localizedValue=='Standard DSv5 Family vCPUs'].{name:name.localizedValue,current:currentValue,limit:limit}" \
   -o table
 ```
 
-Free Trial situation:
+මේකෙන් region එකේ available vCPU quota බලන්න පුළුවන්.
 
-```text
-Total Regional vCPUs        4 / 4
-Standard DSv5 Family vCPUs  4 / 4
+Specific VM family quota බලන්න:
+
+```bash
+az vm list-usage \
+  --location australiaeast \
+  --query "[?contains(name.localizedValue, 'Dv4') || contains(name.localizedValue, 'DSv5') || contains(name.localizedValue, 'BSv2')]" \
+  -o table
 ```
 
-Meaning:
+මේ project එකේදී history එක මෙහෙමයි:
 
-- current cluster already uses 4 vCPU
-- another node cannot be added
-- full capstone cannot run comfortably with default free trial quota
+```text
+Free Trial:
+  Total Regional vCPUs: 4/4
+  Capacity insufficient
+
+After Pay-As-You-Go upgrade:
+  Total Regional vCPU quota increased to 10
+
+DSv5 family:
+  Weird family limit issue තිබුණා
+
+Bsv2 family:
+  quota 0
+
+Standard_B2ms:
+  allowed නැහැ
+
+Dv4 family:
+  available
+
+Final choice:
+  Standard_D2_v4
+```
 
 ---
 
-## Part 4 - Azure Free Account to Pay-As-You-Go
+## Cost guardrail එකක් දාන්නේ ඇයි?
 
-### 4.1 Why upgrade?
+Pay-As-You-Go upgrade කළා කියලා unlimited cost spend කරන්න ඕන කියන එක නෙවෙයි.
 
-Azure Free Account can start this project. But default Free Trial quota can be too small for the full capstone.
+Cloud platform engineer කෙනෙක් cluster capacity increase කරනකොට cost safety එකත් බලන්න ඕන.
 
-Full capstone includes AKS, Argo CD, Gateway API, NGINX Gateway Fabric, monitoring, OpenTelemetry, app workloads, MongoDB, RabbitMQ, and future AIOps components.
-
-Recommended minimum for full practical setup:
-
-```text
-6 vCPU = workable
-8 vCPU = better
-10+ vCPU = comfortable
-```
-
-### 4.2 Upgrade instruction for learners
-
-In Azure Portal:
-
-```text
-Subscriptions
-→ Free Trial subscription
-→ Upgrade
-→ Select Basic - Included support plan
-→ Do not select paid support plans
-→ Upgrade to Pay-As-You-Go
-```
-
-Important:
-
-- Pay-As-You-Go does not mean unlimited free usage
-- remaining free credit can still apply during the credit period
-- after credit is used or expired, running resources can charge the payment card
-- users must set budget alerts before continuing
-
-### 4.3 Create cost guardrails
-
-In Azure Portal:
-
-```text
-Cost Management + Billing
-→ Cost Management
-→ Budgets
-→ Add
-```
-
-Recommended budget:
+ඒ නිසා budget guardrail එකක් දාලා තිබුණා:
 
 ```text
 Monthly budget: 50 USD
+
+Actual alerts:
+  50%
+  75%
+  90%
+  100%
+
+Forecasted alerts:
+  50%
+  75%
+  100%
 ```
 
-Recommended alerts:
-
-Actual cost:
-
-- 50%
-- 75%
-- 90%
-- 100%
-
-Forecasted cost:
-
-- 50%
-- 75%
-- 100%
-
-Important:
+සරලව:
 
 ```text
-Budget alerts do not stop resources automatically.
-They only send email alerts.
-Users must still clean up resources manually.
+Quota නැතුව platform එක run වෙන්නේ නැහැ.
+Budget නැතුව platform එක safe නැහැ.
 ```
 
 ---
 
-## Part 5 - Check quota after Pay-As-You-Go upgrade
+## Current node pools
 
-After upgrade, check quota again:
-
-```bash
-az vm list-usage \
-  --location australiaeast \
-  --query "[?name.localizedValue=='Total Regional vCPUs' || name.localizedValue=='Standard DSv5 Family vCPUs' || name.localizedValue=='Standard BS Family vCPUs' || name.localizedValue=='Standard Dv4 Family vCPUs' || name.localizedValue=='Standard Dv5 Family vCPUs'].{name:name.localizedValue,current:currentValue,limit:limit}" \
-  -o table
-```
-
-Observed after upgrade:
+Capacity fix එකෙන් පස්සේ node pools මෙහෙමයි:
 
 ```text
-Total Regional vCPUs        current 4  limit 10
-Standard DSv5 Family vCPUs  current 4  limit 0
-Standard BS Family vCPUs    current 0  limit 10
-Standard Dv4 Family vCPUs   current 0  limit 10
-Standard Dv5 Family vCPUs   current 0  limit 0
+system:
+  VM size: Standard_D2s_v5
+  count: 1
+  min: 1
+  max: 2
+  mode: System
+
+user:
+  VM size: Standard_D2s_v5
+  count: 1
+  min: 1
+  max: 2
+  mode: User
+
+apps:
+  VM size: Standard_D2_v4
+  count: 1
+  min: 1
+  max: 2
+  mode: User
 ```
 
-Important lesson:
-
-```text
-Total regional quota alone is not enough.
-You must also check VM family quota.
-```
-
-In this project, DSv5 was already used, B2ms was not allowed, Bsv2 quota was 0, Dv4 family had quota, therefore `Standard_D2_v4` was selected.
+apps node pool එක add කළේ application workloads run කරන්න.
 
 ---
 
-## Part 6 - Select correct VM size
+## Node pool design එකේ meaning එක
 
-### 6.1 B2ms attempt
+AKS cluster එකක system node pool එක platform/system workloads සඳහා තබාගන්න එක හොඳ practice එකක්.
 
-We first tried:
+Example:
+
+```text
+system node pool:
+  Core Kubernetes / platform components
+
+user node pool:
+  General workloads
+
+apps node pool:
+  Application-specific workloads
+```
+
+මේක production වලදී useful වෙන්නේ:
+
+- app workload එක platform pods වලට disturb නොකරන්න
+- scaling policy වෙනම manage කරන්න
+- cost control කරන්න
+- troubleshooting පහසු කරන්න
+- future taints/tolerations හෝ node selectors apply කරන්න
+
+---
+
+## apps node pool එක CLI එකෙන් add කිරීම
+
+Quota issue එක solve වුණාට පස්සේ apps node pool එක add කළා.
+
+Command pattern එක:
 
 ```bash
 az aks nodepool add \
   --resource-group rg-aks-capstone-ae-001 \
   --cluster-name aks-capstone-ae-001 \
   --name apps \
-  --node-vm-size Standard_B2ms \
   --node-count 1 \
-  --enable-cluster-autoscaler \
   --min-count 1 \
   --max-count 2 \
-  --mode User \
-  --labels workload=apps project=aks-capstone
-```
-
-Observed error:
-
-```text
-The VM size of Standard_B2ms is not allowed in your subscription in location 'australiaeast'
-```
-
-### 6.2 Check D-series family quota
-
-```bash
-az vm list-usage \
-  --location australiaeast \
-  --query "[?name.localizedValue=='Total Regional vCPUs' || name.localizedValue=='Standard Dv5 Family vCPUs' || name.localizedValue=='Standard Dv4 Family vCPUs' || name.localizedValue=='Standard D Family vCPUs' || name.localizedValue=='Standard DSv5 Family vCPUs'].{name:name.localizedValue,current:currentValue,limit:limit}" \
-  -o table
-```
-
-Result:
-
-```text
-Standard DSv5 Family vCPUs  current 4  limit 0
-Total Regional vCPUs        current 4  limit 10
-Standard D Family vCPUs     current 0  limit 10
-Standard Dv4 Family vCPUs   current 0  limit 10
-Standard Dv5 Family vCPUs   current 0  limit 0
-```
-
-Decision:
-
-```text
-Use Standard_D2_v4 for apps node pool.
-Avoid Standard_D2s_v5 for new pools.
-Avoid Standard_D2_v5 because Dv5 family limit is 0.
-```
-
----
-
-## Part 7 - Add apps node pool
-
-### 7.1 Add apps node pool using CLI
-
-```bash
-az aks nodepool add \
-  --resource-group rg-aks-capstone-ae-001 \
-  --cluster-name aks-capstone-ae-001 \
-  --name apps \
+  --enable-cluster-autoscaler \
   --node-vm-size Standard_D2_v4 \
-  --node-count 1 \
-  --enable-cluster-autoscaler \
-  --min-count 1 \
-  --max-count 2 \
-  --mode User \
-  --labels workload=apps project=aks-capstone
+  --mode User
 ```
 
-Watch nodes:
-
-```bash
-kubectl get nodes -w
-```
-
-Expected node pool:
+මෙහි meaning එක:
 
 ```text
-apps   Standard_D2_v4   User   Running
+--name apps:
+  node pool එකේ නම
+
+--node-count 1:
+  initially node එකක් 1
+
+--min-count 1:
+  autoscaler minimum node count
+
+--max-count 2:
+  autoscaler maximum node count
+
+--enable-cluster-autoscaler:
+  demand එක වැඩි වුණොත් node count scale කරන්න
+
+--node-vm-size Standard_D2_v4:
+  quota available VM size එක
+
+--mode User:
+  application workloads සඳහා user node pool එකක්
 ```
 
-### 7.2 Verify node pools
+---
+
+## Node pool එක verify කිරීම
 
 ```bash
 az aks nodepool list \
-  --cluster-name aks-capstone-ae-001 \
   --resource-group rg-aks-capstone-ae-001 \
-  --query '[].{name:name,count:count,minCount:minCount,maxCount:maxCount,vmSize:vmSize,mode:mode,powerState:powerState.code}' \
+  --cluster-name aks-capstone-ae-001 \
   -o table
 ```
 
-Expected:
+Expected idea:
 
 ```text
-system  1  Standard_D2s_v5
-user    1  Standard_D2s_v5
-apps    1  Standard_D2_v4
+Name     VmSize           Count    Mode
+system   Standard_D2s_v5  1        System
+user     Standard_D2s_v5  1        User
+apps     Standard_D2_v4   1        User
+```
+
+Kubernetes nodes බලන්න:
+
+```bash
+kubectl get nodes -o wide
 ```
 
 ---
 
-## Part 8 - Verify application after apps node pool
-
-### 8.1 Check dev pods
+## MongoDB schedule වුණාද බලන්න
 
 ```bash
-kubectl get pods -n capstone-dev -o wide
+kubectl get pods -n capstone-store-dev -o wide
 ```
 
-Expected:
+Expected result:
 
 ```text
-mongodb-0            1/1 Running
-makeline-service     1/1 Running
-order-service        1/1 Running
-product-service      1/1 Running
-rabbitmq             1/1 Running
-store-front          1/1 Running
+store-front        1/1   Running
+product-service    1/1   Running
+order-service      1/1   Running
+rabbitmq           1/1   Running
+makeline-service   1/1   Running
+mongodb            1/1   Running
 ```
 
-MongoDB should schedule on apps node:
-
-```text
-mongodb-0   aks-apps-xxxxx
-```
-
-### 8.2 Check Argo CD
+MongoDB apps node එකේ run වෙනවාද බලන්න:
 
 ```bash
-kubectl get application capstone-store-dev -n argocd -o wide
+kubectl get pod -n capstone-store-dev -l app=mongodb -o wide
+```
+
+---
+
+## Argo CD status check කිරීම
+
+```bash
+kubectl get application -n argocd
 ```
 
 Expected:
@@ -551,12 +401,26 @@ Expected:
 capstone-store-dev   Synced   Healthy
 ```
 
-### 8.3 Test Gateway
+Argo CD app details බලන්න:
 
 ```bash
-GATEWAY_IP="$(kubectl get gateway platform-gateway -n platform-gateway -o jsonpath='{.status.addresses[0].value}')"
-echo "Open in browser: http://$GATEWAY_IP"
-curl -I "http://$GATEWAY_IP"
+kubectl describe application capstone-store-dev -n argocd
+```
+
+මේ stage එකේදී latest GitOps revision එක:
+
+```text
+860377657fa9e8804dae18d9cea30a373761190d
+```
+
+---
+
+## Gateway test
+
+Application එක browser හෝ curl වලින් test කරන්න:
+
+```bash
+curl -I http://20.53.203.159
 ```
 
 Expected:
@@ -565,240 +429,429 @@ Expected:
 HTTP/1.1 200 OK
 ```
 
+මේකෙන් අදහස් වෙන්නේ:
+
+```text
+User request
+  ↓
+Gateway external IP
+  ↓
+HTTPRoute
+  ↓
+store-front service
+  ↓
+store-front pod
+  ↓
+Application response
+```
+
 ---
 
-## Part 9 - Terraform drift problem
+## Terraform drift කියන්නේ මොකක්ද?
 
-### 9.1 Why Terraform drift happened
+apps node pool එක මුලින් CLI එකෙන් add කළා.
 
-Apps node pool was created manually using Azure CLI. But the AKS platform is managed by Terraform.
+නමුත් අපේ platform source of truth එක Terraform.
 
-So after CLI creation:
+ඒ කියන්නේ resource එක Azure වල තියෙනවා. නමුත් Terraform config/state වල නැත්නම් Terraform ඒක manage කරන්නේ නැහැ.
 
-```text
-Azure knows about apps node pool.
-Terraform config does not know about apps node pool.
-Terraform state does not know about apps node pool.
-```
+මේකට කියන්නේ drift.
 
-This is infrastructure drift.
-
-Production rule:
+සරල example:
 
 ```text
-Manual cloud changes must be added back into Terraform config and state.
+Azure reality:
+  apps node pool exists
+
+Terraform knowledge:
+  apps node pool unknown
+
+Problem:
+  Terraform is no longer the full source of truth
 ```
 
-### 9.2 Add apps node pool support to Terraform module
+Production වලදී drift dangerous වෙන්නේ:
 
-Module updated:
+- future terraform apply එකකදී unexpected changes එන්න පුළුවන්
+- team members ට actual platform state එක නොතේරෙන්න පුළුවන්
+- auditability අඩු වෙනවා
+- disaster recovery අමාරු වෙනවා
+- infrastructure documentation mismatch වෙනවා
 
-```text
-modules/aks/main.tf
-modules/aks/variables.tf
-```
+ඒ නිසා CLI fix එක පස්සේ Terraform import අනිවාර්යයි.
 
-Environment updated:
+---
 
-```text
-environments/capstone-platform/main.tf
-environments/capstone-platform/variables.tf
-environments/capstone-platform/terraform.tfvars.example
-```
+## Terraform config එකට apps node pool එක add කිරීම
 
-Added variables:
+Terraform module/config එක update කරලා apps node pool එක manage කරන්න.
 
-```text
-enable_apps_node_pool
-apps_node_pool_name
-apps_node_vm_size
-apps_node_min_count
-apps_node_max_count
-apps_node_os_disk_size_gb
-apps_node_labels
-```
-
-Example values:
+Conceptually config එකේ apps node pool එක මේ වගේ meaning එකක් තියෙන්න ඕන:
 
 ```hcl
-enable_apps_node_pool     = true
-apps_node_pool_name       = "apps"
-apps_node_vm_size         = "Standard_D2_v4"
-apps_node_min_count       = 1
-apps_node_max_count       = 2
-apps_node_os_disk_size_gb = 128
-
-apps_node_labels = {
-  workload = "apps"
-  project  = "aks-capstone"
+apps = {
+  name                 = "apps"
+  vm_size              = "Standard_D2_v4"
+  node_count           = 1
+  min_count            = 1
+  max_count            = 2
+  enable_auto_scaling  = true
+  mode                 = "User"
 }
 ```
 
+Actual file structure එක project එකේ module design එකට අනුව වෙනස් වෙන්න පුළුවන්.
+
+වැදගත්ම දේ:
+
+```text
+Azure වල තියෙන apps node pool එක
+Terraform configuration එකේත් represent වෙන්න ඕන.
+```
+
 ---
 
-## Part 10 - Terraform import
+## Terraform import කිරීම
 
-### 10.1 What is terraform import?
+Import command එක resource address එක project Terraform structure එකට අනුව වෙනස් වෙන්න පුළුවන්.
 
-Terraform import does not create a resource.
-
-Terraform import does not delete a resource.
-
-Terraform import maps an existing cloud resource into Terraform state.
-
-In this case:
-
-Existing Azure resource:
-
-```text
-AKS cluster: aks-capstone-ae-001
-Node pool: apps
-```
-
-Terraform resource address:
-
-```text
-module.aks.azurerm_kubernetes_cluster_node_pool.apps[0]
-```
-
-Import connects those two.
-
-### 10.2 Import command
+Command pattern එක:
 
 ```bash
-cd "$PLATFORM_REPO/environments/capstone-platform"
-
-SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
-
 terraform import \
-  'module.aks.azurerm_kubernetes_cluster_node_pool.apps[0]' \
-  "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/rg-aks-capstone-ae-001/providers/Microsoft.ContainerService/managedClusters/aks-capstone-ae-001/agentPools/apps"
+  '<terraform_resource_address_for_apps_node_pool>' \
+  '/subscriptions/<subscription-id>/resourceGroups/rg-aks-capstone-ae-001/providers/Microsoft.ContainerService/managedClusters/aks-capstone-ae-001/agentPools/apps'
 ```
 
-After import, Terraform state knows that this existing Azure node pool belongs to this Terraform resource block.
+මෙහි meaning එක:
 
-### 10.3 Plan after import
+```text
+terraform import:
+  Existing Azure resource එක Terraform state එකට connect කරනවා.
+
+resource address:
+  Terraform config එකේ resource එකේ address එක.
+
+Azure resource ID:
+  Azure වල already තියෙන apps node pool එකේ full ID එක.
+```
+
+Import කළා කියලා resource එක create වෙන්නේ නැහැ. ඒක already තියෙන resource එක Terraform state එකට register කරන එක.
+
+---
+
+## Terraform plan කිරීම
+
+Import පස්සේ plan run කරන්න:
 
 ```bash
-terraform plan -out=tfplan-apps-nodepool
+terraform plan
 ```
 
-Important:
+Expected idea:
 
 ```text
-If plan shows destroy/recreate, stop.
+No destructive changes
 ```
 
-Expected safe result:
+හෝ මේ stage එකේදී වගේ:
 
 ```text
-Plan: 0 to add, 0 or few to change, 0 to destroy
+0 added, 1 changed, 0 destroyed
 ```
 
-In this project final apply was:
+වැදගත්ම දේ:
 
 ```text
-0 added
-1 changed
-0 destroyed
+destroy වෙන resource නොතිබිය යුතුයි.
 ```
 
-### 10.4 Apply safe plan
+Plan එකේ unexpected destroy එකක් පේනවා නම් apply කරන්න එපා.
+
+---
+
+## Terraform apply කිරීම
+
+Plan එක safe නම්:
 
 ```bash
-terraform apply "tfplan-apps-nodepool-final"
+terraform apply
 ```
 
-### 10.5 Verify after Terraform apply
+මේ stage එකේදී apply result එක:
+
+```text
+0 added, 1 changed, 0 destroyed
+```
+
+මෙයින් අදහස් වෙන්නේ:
+
+```text
+apps node pool එක දැන් Terraform-managed.
+Manual CLI drift එක fix වෙලා.
+```
+
+---
+
+## Final verification
+
+Node pools:
 
 ```bash
 az aks nodepool list \
-  --cluster-name aks-capstone-ae-001 \
   --resource-group rg-aks-capstone-ae-001 \
-  --query '[].{name:name,count:count,minCount:minCount,maxCount:maxCount,vmSize:vmSize,mode:mode,powerState:powerState.code}' \
+  --cluster-name aks-capstone-ae-001 \
   -o table
-
-kubectl get application capstone-store-dev -n argocd -o wide
-kubectl get pods -n capstone-dev -o wide
 ```
 
-Expected:
-
-```text
-apps node pool still Running
-capstone-store-dev Synced / Healthy
-All dev app pods Running
-```
-
----
-
-## Part 11 - Commit Terraform changes
-
-After Terraform apply and verification:
+Pods:
 
 ```bash
-cd "$PLATFORM_REPO"
-
-git status --short
-
-git add modules/aks/main.tf \
-  modules/aks/variables.tf \
-  environments/capstone-platform/main.tf \
-  environments/capstone-platform/variables.tf \
-  environments/capstone-platform/terraform.tfvars.example \
-  modules/resource-group/outputs.tf \
-  modules/resource-group/variables.tf
-
-git commit -m "Manage capstone apps node pool with Terraform"
-
-git push
+kubectl get pods -n capstone-store-dev -o wide
 ```
 
-Do not commit local `terraform.tfvars` if it contains local/private values.
+Argo CD:
 
----
-
-## Final result of this stage
-
-Final node pools:
-
-```text
-system  Standard_D2s_v5  count 1
-user    Standard_D2s_v5  count 1
-apps    Standard_D2_v4   count 1
-```
-
-Final app status:
-
-```text
-capstone-store-dev   Synced / Healthy
-mongodb              1/1 Running
-makeline-service     1/1 Running
-store-front          1/1 Running
+```bash
+kubectl get application capstone-store-dev -n argocd
 ```
 
 Gateway:
 
+```bash
+curl -I http://20.53.203.159
+```
+
+Expected final status:
+
 ```text
-HTTP/1.1 200 OK
+AKS cluster: Running
+Node pools: system, user, apps
+MongoDB: Running
+makeline-service: Running
+Argo CD: Synced / Healthy
+Gateway: HTTP 200
+Terraform: apps node pool managed
 ```
 
 ---
 
-## Production meaning
+## Troubleshooting
 
-This stage demonstrates a real platform engineering scenario:
+### Issue 1 - MongoDB pod Pending
 
-1. A new app dependency was added.
-2. The workload failed because of cluster capacity.
-3. The issue was diagnosed using Kubernetes events.
-4. Azure quota limitations were identified.
-5. Subscription was upgraded safely with budget guardrails.
-6. VM family quota was checked.
-7. Correct node pool size was selected.
-8. Additional node pool was added.
-9. App health recovered.
-10. Manual cloud resource was imported into Terraform.
-11. Terraform became the source of truth again.
+Check:
 
-This is exactly how infrastructure should be handled in a production-style platform project.
+```bash
+kubectl describe pod -n capstone-store-dev -l app=mongodb
+```
+
+If you see insufficient CPU or memory:
+
+```text
+Insufficient cpu
+Insufficient memory
+```
+
+Meaning:
+
+```text
+Cluster capacity is not enough.
+```
+
+Fix:
+
+```text
+Check quota
+Add suitable node pool
+Verify pod scheduling
+```
+
+---
+
+### Issue 2 - Azure says quota exceeded
+
+Check quota:
+
+```bash
+az vm list-usage \
+  --location australiaeast \
+  -o table
+```
+
+Fix options:
+
+```text
+Option 1:
+  Use available VM family
+
+Option 2:
+  Request quota increase
+
+Option 3:
+  Upgrade from Free Trial to Pay-As-You-Go
+
+Option 4:
+  Reduce node count or VM size
+```
+
+---
+
+### Issue 3 - VM size not allowed
+
+If Standard_B2ms or another VM size is not allowed:
+
+```text
+The selected VM size is not available or allowed for this subscription/region.
+```
+
+Fix:
+
+```text
+Choose another VM size with available quota.
+```
+
+In this project:
+
+```text
+Standard_D2_v4 was used for apps node pool.
+```
+
+---
+
+### Issue 4 - Terraform wants to destroy something
+
+If `terraform plan` shows destroy:
+
+```text
+Plan: x to add, x to change, x to destroy
+```
+
+Do not apply immediately.
+
+Check:
+
+```bash
+terraform state list
+terraform plan
+```
+
+Possible reasons:
+
+```text
+Resource address mismatch
+Import target wrong
+Terraform config does not match Azure reality
+Provider default values differ
+```
+
+Fix carefully before apply.
+
+---
+
+### Issue 5 - Argo CD OutOfSync
+
+Check:
+
+```bash
+kubectl get application capstone-store-dev -n argocd
+```
+
+If OutOfSync:
+
+```bash
+kubectl describe application capstone-store-dev -n argocd
+```
+
+Then check GitOps repo revision and manifests.
+
+---
+
+### Issue 6 - Gateway does not return HTTP 200
+
+Check HTTP response:
+
+```bash
+curl -I http://20.53.203.159
+```
+
+Check Gateway and routes:
+
+```bash
+kubectl get gateway -A
+kubectl get httproute -A
+kubectl describe httproute -n capstone-store-dev
+```
+
+Check store-front service:
+
+```bash
+kubectl get svc -n capstone-store-dev
+kubectl get endpoints -n capstone-store-dev
+```
+
+If service endpoints are empty, selector labels may be wrong or pods may not be ready.
+
+---
+
+## Learner summary
+
+මේ stage එකේදී අපි command ටිකක් run කළා කියන එකට වඩා වැදගත් lesson එකක් ඉගෙන ගත්තා.
+
+Real-world platform engineering flow එක මෙන්න මේකයි:
+
+```text
+Application grows
+  ↓
+Cluster capacity becomes insufficient
+  ↓
+Pods fail to schedule
+  ↓
+Cloud quota must be checked
+  ↓
+Cost guardrails must be added
+  ↓
+Safe node pool must be selected
+  ↓
+Application recovers
+  ↓
+Manual cloud changes must be imported into Terraform
+  ↓
+Terraform becomes source of truth again
+```
+
+මේක production වලදී ගොඩක් වැදගත්.
+
+Good engineer කෙනෙක් incident එක fix කරනවා.
+
+Better platform engineer කෙනෙක් incident එක fix කරලා, cost risk manage කරලා, Terraform drift එකත් clean කරනවා.
+
+---
+
+## Stage 08 completion checklist
+
+- [x] Azure Free Trial limitation understood
+- [x] Pay-As-You-Go upgrade completed
+- [x] Budget guardrail created
+- [x] Azure quota checked
+- [x] apps node pool created
+- [x] MongoDB scheduled successfully
+- [x] makeline-service recovered
+- [x] Argo CD app Synced / Healthy
+- [x] Gateway returned HTTP 200
+- [x] apps node pool imported into Terraform state
+- [x] Terraform config updated
+- [x] Terraform apply completed without destroy
+- [x] apps node pool is now Terraform-managed
+
+---
+
+## Next stage
+
+Next likely stage:
+
+```text
+Stage 09 - Add store-admin, virtual-customer, and virtual-worker to dev app
+```
+
+Stage 09 එකේදී අපි app එක තව expand කරනවා. ඒකෙන් learner ට microservices application එකක admin UI, simulated customers, and background workers production-style GitOps workflow එකෙන් deploy කරන විදිහ ඉගෙන ගන්න පුළුවන්.
