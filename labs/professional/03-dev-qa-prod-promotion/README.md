@@ -155,7 +155,7 @@ You need write access to push those changes. A fork gives you your own copy of t
 
 Go to your projects folder:
 
-    cd /Users/andrewferdinandus/projcts
+    cd <local-path>
 
 Clone your fork:
 
@@ -187,7 +187,7 @@ Verify:
 
 Set the platform repo directory:
 
-    PLATFORM_REPO_DIR="/Users/andrewferdinandus/projcts/terraform-azure-aks"
+    PLATFORM_REPO_DIR="<local-path>/terraform-azure-aks"
 
 Verify:
 

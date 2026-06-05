@@ -236,7 +236,7 @@ Example fork URL:
 
 Clone your fork:
 
-    cd /Users/andrewferdinandus/projcts
+    cd <local-path>
     git clone https://github.com/<your-user-or-org>/aks-gitops-sample-app.git
     cd aks-gitops-sample-app
 
@@ -258,7 +258,7 @@ Verify:
 
 Set the platform repository directory:
 
-    PLATFORM_REPO_DIR="/Users/andrewferdinandus/projcts/terraform-azure-aks"
+    PLATFORM_REPO_DIR="<local-path>/terraform-azure-aks"
 
 Verify:
 

@@ -74,13 +74,13 @@ Resource group: rg-aks-capstone-ae-001
 AKS cluster: aks-capstone-ae-001
 ACR: acrakscapstoneae9954.azurecr.io
 Key Vault: kv-aks-capstone-ae9954
-Gateway external IP: http://20.53.203.159
+Gateway external IP: http://<gateway-public-ip>
 ```
 
 Gateway test එක:
 
 ```bash
-curl -I http://20.53.203.159
+curl -I http://<gateway-public-ip>
 ```
 
 Expected result:
@@ -420,7 +420,7 @@ kubectl describe application capstone-store-dev -n argocd
 Application එක browser හෝ curl වලින් test කරන්න:
 
 ```bash
-curl -I http://20.53.203.159
+curl -I http://<gateway-public-ip>
 ```
 
 Expected:
@@ -619,7 +619,7 @@ kubectl get application capstone-store-dev -n argocd
 Gateway:
 
 ```bash
-curl -I http://20.53.203.159
+curl -I http://<gateway-public-ip>
 ```
 
 Expected final status:
@@ -772,7 +772,7 @@ Then check GitOps repo revision and manifests.
 Check HTTP response:
 
 ```bash
-curl -I http://20.53.203.159
+curl -I http://<gateway-public-ip>
 ```
 
 Check Gateway and routes:

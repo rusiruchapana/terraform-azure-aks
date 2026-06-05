@@ -155,7 +155,7 @@ Argo CD desired state read කරන්නේ Git වලින්. මෙම lab
 
 ඔයාගේ projects folder එකට යන්න:
 
-    cd /Users/andrewferdinandus/projcts
+    cd <local-path>
 
 ඔයාගේ fork එක clone කරන්න:
 
@@ -187,7 +187,7 @@ Verify කරන්න:
 
 Platform repo directory set කරන්න:
 
-    PLATFORM_REPO_DIR="/Users/andrewferdinandus/projcts/terraform-azure-aks"
+    PLATFORM_REPO_DIR="<local-path>/terraform-azure-aks"
 
 Verify කරන්න:
 

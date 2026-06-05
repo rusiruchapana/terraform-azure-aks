@@ -221,7 +221,7 @@ Gateway API model එකේ external address එක Gateway resource එක crea
 
 Result එකේ `ADDRESS` value එක තිබුණා:
 
-    20.53.203.159
+    <gateway-public-ip>
 
 Gateway status:
 
@@ -261,7 +261,7 @@ Actual application traffic path එක Gateway resource එක හරහා expo
 
 මෙම project එකේ external Gateway address:
 
-    20.53.203.159
+    <gateway-public-ip>
 
 පස්සේ capstone app එක deploy කළාම HTTPRoute එකක් create කරලා app traffic මේ Gateway හරහා route කරනවා.
 
@@ -281,7 +281,7 @@ Gateway API model එකේ external address එක Gateway resource එක crea
 
 Result එකේ `ADDRESS` value එක තිබුණා:
 
-    20.53.203.159
+    <gateway-public-ip>
 
 Gateway status:
 
@@ -321,6 +321,6 @@ Actual application traffic path එක Gateway resource එක හරහා expo
 
 මෙම project එකේ external Gateway address:
 
-    20.53.203.159
+    <gateway-public-ip>
 
 පස්සේ capstone app එක deploy කළාම HTTPRoute එකක් create කරලා app traffic මේ Gateway හරහා route කරනවා.

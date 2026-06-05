@@ -400,7 +400,7 @@ Node:
 
 ## Gateway test
 
-    curl -I http://20.53.203.159
+    curl -I http://<gateway-public-ip>
 
 Expected:
 

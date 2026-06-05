@@ -137,11 +137,11 @@ Expected:
 
 Platform repository directory set කරන්න:
 
-    PLATFORM_REPO_DIR="/Users/andrewferdinandus/projcts/terraform-azure-aks"
+    PLATFORM_REPO_DIR="<local-path>/terraform-azure-aks"
 
 Sample repository directory set කරන්න:
 
-    SAMPLE_REPO_DIR="/Users/andrewferdinandus/projcts/aks-gitops-sample-app"
+    SAMPLE_REPO_DIR="<local-path>/aks-gitops-sample-app"
 
 Gateway IP set කරන්න:
 
@@ -149,7 +149,7 @@ Gateway IP set කරන්න:
 
 Example:
 
-    GATEWAY_IP="104.43.75.139"
+    GATEWAY_IP="<gateway-public-ip>"
 
 Verify කරන්න:
 
@@ -237,7 +237,7 @@ Open කරන්න:
 
 Example:
 
-    http://104.43.75.139/canary-viewer/
+    http://<gateway-public-ip>/canary-viewer/
 
 Viewer එක active Gateway route එකට repeated requests යවලා backend response count කරනවා.
 
