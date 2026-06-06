@@ -155,31 +155,47 @@ Example meanings:
     GITOPS_STORE_FRONT_FILE:
       GitOps manifest file where store-front image is defined
 
-## Set GitOps token secret
+## GitOps token secret එක set කිරීම
 
-Run from the app repo:
+App repo workflow එකට GitOps repo එකට commit push කරන්න permission ඕන.
 
-    gh secret set GITOPS_REPO_TOKEN
+ඒ permission එක GitHub secret එකක් විදිහට save කරනවා.
 
-Paste the token when prompted.
-
-Verify:
-
-    gh secret list
-
-Expected:
+Secret name එක:
 
     GITOPS_REPO_TOKEN
 
-## Set GitOps variables
+App repo එකේ සිට run කරන්න:
 
-Run from the app repo:
+    gh secret set GITOPS_REPO_TOKEN
+
+Prompt එක ආවම GitOps repo එකට write permission තියෙන token එක paste කරන්න.
+
+Verify කරන්න:
+
+    gh secret list
+
+Expected result එකේ මේ secret එක පේන්න ඕන:
+
+    GITOPS_REPO_TOKEN
+
+Security note:
+
+    මේ token එකට GitOps repo එකට විතරක් access දෙන්න.
+    Contents read/write permission විතරක් දෙන්න.
+    Full account access දෙන්න එපා.
+
+## GitOps variables set කිරීම
+
+Stage 12 workflow එකට GitOps repo details variables විදිහට දෙන්න ඕන.
+
+App repo එකේ සිට run කරන්න:
 
     gh variable set GITOPS_REPO --body "<github-owner>/<gitops-repo>"
     gh variable set GITOPS_BRANCH --body "main"
     gh variable set GITOPS_STORE_FRONT_FILE --body "apps/capstone-store/base/aks-store-quickstart.yaml"
 
-Verify:
+Verify කරන්න:
 
     gh variable list
 
@@ -191,76 +207,94 @@ Expected variables:
     GITOPS_REPO
     GITOPS_STORE_FRONT_FILE
 
-## Important note about current GitOps path
+මේ variables වල meaning එක:
 
-In this stage, the workflow updates:
+    GITOPS_REPO:
+      update කරන්න ඕන GitOps repo එක
+
+    GITOPS_BRANCH:
+      GitOps repo branch එක
+
+    GITOPS_STORE_FRONT_FILE:
+      store-front image line එක තියෙන manifest file එක
+
+## Current GitOps path ගැන වැදගත් note එක
+
+මේ stage එකේදී workflow එක update කරන්නේ:
 
     apps/capstone-store/base/aks-store-quickstart.yaml
 
-This is enough for current Dev deployment.
+දැනට Dev deployment එකට මේක ප්‍රමාණවත්.
 
-Later, when Dev, QA, and Prod promotion is added properly, the repo can be improved to use environment overlays:
+නමුත් later Dev, QA, Prod promotion properly build කරනකොට GitOps repo structure එක මෙහෙම improve කරන්න පුළුවන්:
 
     apps/capstone-store/base
     apps/capstone-store/overlays/dev
     apps/capstone-store/overlays/qa
     apps/capstone-store/overlays/prod
 
-Then promotion will update environment-specific paths.
+එතකොට Dev update එක dev overlay එකට යනවා.
+QA promotion එක qa overlay එකට යනවා.
+Prod promotion එක prod overlay එකට යනවා.
 
-Current Stage 12 goal is Dev deployment automation first.
+Stage 12 goal එක Dev deployment automation prove කිරීමයි.
 
-## Workflow file
+## Workflow file එක
 
-Workflow path in app repo:
+App repo එකේ workflow file path එක:
 
     .github/workflows/build-and-deploy-store-front-dev.yml
 
-Workflow name:
+Workflow name එක:
 
     Build store-front and deploy Dev via GitOps
 
-Trigger:
+Trigger එක:
 
     workflow_dispatch
 
-Input:
+ඒ කියන්නේ workflow එක manual trigger කරන්න පුළුවන්.
+
+Input එක:
 
     image_tag
 
-Example image tag:
+Example tag එක:
 
     stage12-v1
 
-## Workflow responsibilities
+## Workflow එක කරන වැඩ
 
-The workflow does these tasks:
+මේ workflow එක මේ steps කරයි:
 
-    Checkout app source
-    Azure login with OIDC
-    Login to ACR
-    Set up Docker Buildx
-    Build and push store-front image
-    Verify image tag in ACR
-    Checkout GitOps repo
-    Update Dev image tag
-    Commit and push GitOps change
+    App source checkout කිරීම
+    Azure OIDC login කිරීම
+    ACR login කිරීම
+    Docker Buildx setup කිරීම
+    store-front image build කිරීම
+    image එක ACR එකට push කිරීම
+    ACR tag verify කිරීම
+    GitOps repo checkout කිරීම
+    Dev image tag update කිරීම
+    GitOps repo එකට commit and push කිරීම
 
-## Why linux/amd64 is still important
+## linux/amd64 තවමත් වැදගත් ඇයි?
 
-Stage 10 showed a real issue:
+Stage 10 වලදී අපි real issue එකක් දැක්කා:
 
     no match for platform in manifest
 
-To prevent that issue, the workflow builds:
+ඒක image architecture mismatch issue එකක්.
+
+ඒ නිසා Stage 12 workflow එකේත් image build කරන්නේ:
 
     linux/amd64
 
-This makes the image compatible with AKS Linux nodes.
+මේකෙන් AKS Linux nodes වල image pull/run issue එක avoid වෙනවා.
 
-## Run Stage 12 workflow
+## Stage 12 workflow එක run කිරීම
 
-Using GitHub UI:
+GitHub UI එකෙන් run කරන්න:
 
     Repository
         -> Actions
@@ -268,21 +302,21 @@ Using GitHub UI:
         -> Run workflow
         -> image_tag = stage12-v1
 
-Using GitHub CLI:
+GitHub CLI එකෙන් run කරන්න:
 
     gh workflow run "Build store-front and deploy Dev via GitOps" -f image_tag=stage12-v1
 
-Watch run:
+Running workflow එක watch කරන්න:
 
     gh run watch
 
-View latest runs:
+Recent workflow runs බලන්න:
 
     gh run list --limit 5
 
-## Successful workflow result
+## Successful workflow result එක
 
-Expected successful steps:
+Success run එකකදී මේ steps pass වෙන්න ඕන:
 
     Checkout app source
     Azure login with OIDC
@@ -300,28 +334,26 @@ Observed result:
 
 ## Node.js 20 deprecation warning
 
-GitHub Actions may show this warning:
+GitHub Actions warning එකක් පේන්න පුළුවන්:
 
     Node.js 20 actions are deprecated
 
-This is a warning, not a failure.
+මේක failure එකක් නෙවෙයි.
 
-The workflow can still complete successfully.
+Workflow එක success නම් Stage 12 block වෙන්නේ නැහැ.
 
-Future improvement:
+Future improvement එකක් ලෙස actions versions update කරන්න පුළුවන්.
 
-    Update GitHub Actions versions when Node.js 24 compatible versions are available.
+## ACR image tag verify කිරීම
 
-## Verify ACR image tag
-
-After workflow success, check ACR tags:
+Workflow success වුණාට පස්සේ ACR tags check කරන්න:
 
     az acr repository show-tags \
       --name <your-acr-name> \
       --repository store-front \
       -o table
 
-Expected:
+Expected tags:
 
     stage10-v1
     stage11-v1
@@ -330,25 +362,25 @@ Expected:
 Meaning:
 
     stage10-v1:
-      manual local build and push
+      local machine එකෙන් manual build/push කළ image එක
 
     stage11-v1:
-      GitHub Actions build and push
+      GitHub Actions build/push කළ image එක
 
     stage12-v1:
-      GitHub Actions build, push, and GitOps update
+      GitHub Actions build/push කරලා GitOps update කළ image එක
 
-## Verify GitOps repo update
+## GitOps repo update verify කිරීම
 
-Go to GitOps repo:
+GitOps repo එකට යන්න:
 
     cd <local-path>/aks-capstone-gitops
 
-Pull latest changes:
+Latest changes pull කරන්න:
 
     git pull
 
-Check store-front image line:
+store-front image line එක check කරන්න:
 
     grep -n "store-front" -A 40 apps/capstone-store/base/aks-store-quickstart.yaml | grep "image:"
 
@@ -356,17 +388,19 @@ Expected:
 
     image: <your-acr-login-server>/store-front:stage12-v1
 
-Check recent Git commits:
+Recent Git commits check කරන්න:
 
     git log --oneline -5
 
-Expected commit message:
+Expected commit message එකක්:
 
     Deploy store-front stage12-v1 to dev
 
-## Verify Argo CD status
+මේකෙන් confirm වෙනවා app repo pipeline එක GitOps repo එකට commit push කරලා තියෙනවා කියලා.
 
-Check Argo CD application:
+## Argo CD status verify කිරීම
+
+Argo CD application එක check කරන්න:
 
     kubectl get application capstone-store-dev -n argocd
 
@@ -374,11 +408,18 @@ Expected:
 
     capstone-store-dev   Synced   Healthy
 
-If it shows OutOfSync or Progressing, wait for a short time and check again.
+සමහර වෙලාවට GitOps commit එක push වුණාට පස්සේ ටික වෙලාවක්:
 
-## Verify AKS rollout
+    OutOfSync
+    Progressing
 
-Check rollout:
+වගේ පේන්න පුළුවන්.
+
+ටිකක් wait කරලා නැවත check කරන්න.
+
+## AKS rollout verify කිරීම
+
+store-front deployment rollout status බලන්න:
 
     kubectl rollout status deployment/store-front -n capstone-dev
 
@@ -386,7 +427,7 @@ Expected:
 
     deployment "store-front" successfully rolled out
 
-Check deployment image:
+Deployment image එක check කරන්න:
 
     kubectl get deployment store-front -n capstone-dev -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 
@@ -394,37 +435,37 @@ Expected:
 
     <your-acr-login-server>/store-front:stage12-v1
 
-Check pod:
+Pod status බලන්න:
 
     kubectl get pods -n capstone-dev -l app=store-front -o wide
 
 Expected:
 
-    store-front pod is 1/1 Running
+    store-front pod එක 1/1 Running
 
-## Find Gateway public IP
+## Gateway public IP හොයාගැනීම
 
-Do not guess the Gateway public service name.
+Gateway public IP එක guess කරන්න එපා.
 
-First find LoadBalancer services:
+මුලින් LoadBalancer services බලන්න:
 
     kubectl get svc -A | grep LoadBalancer
 
-Or search gateway-related services:
+නැත්නම් gateway/nginx related services බලන්න:
 
     kubectl get svc -A | grep -E 'LoadBalancer|gateway|nginx'
 
-Identify the LoadBalancer service that has an external IP.
+External IP තියෙන LoadBalancer service එක identify කරන්න.
 
-Example pattern:
+Pattern එක:
 
     <gateway-namespace>   <gateway-service-name>   LoadBalancer   <cluster-ip>   <gateway-public-ip>
 
-Set variable:
+Gateway IP එක variable එකකට දාන්න:
 
     export GATEWAY_PUBLIC_IP="<gateway-public-ip>"
 
-Test Gateway:
+Gateway test කරන්න:
 
     curl -I http://$GATEWAY_PUBLIC_IP
 
@@ -432,21 +473,21 @@ Expected:
 
     HTTP/1.1 200 OK
 
-## Important Gateway lesson
+## Gateway lesson එක
 
-NGINX Gateway Fabric controller service can be ClusterIP.
+NGINX Gateway Fabric controller service එක ClusterIP විය හැක.
 
-The actual public traffic entry service can be a different LoadBalancer service in another namespace.
+Actual public traffic entry service එක වෙන namespace එකක LoadBalancer service එකක් විය හැක.
 
-Therefore:
+ඒ නිසා:
 
-    Do not hardcode or assume service name.
-    Find the LoadBalancer service first.
-    Then test using its external IP.
+    service name එක assume කරන්න එපා
+    LoadBalancer service එක හොයාගන්න
+    external IP එකෙන් test කරන්න
 
 ## Final verified state
 
-Stage 12 final verified state:
+Stage 12 final state එක:
 
     GitHub Actions:
       Build store-front and deploy Dev via GitOps
@@ -470,56 +511,54 @@ Stage 12 final verified state:
 
 ## Production learning points
 
-### 1. CI should not directly deploy with kubectl
+### 1. CI workflow එක kubectl apply නොකරයි
 
-Better pattern:
+Better production pattern එක:
 
     CI updates GitOps repo
     Argo CD deploys
 
-This keeps deployment desired state in Git.
+මෙයින් deployment desired state එක Git repo එකේ audit කරන්න පුළුවන්.
 
-### 2. GitOps repo is the deployment source of truth
+### 2. GitOps repo එක deployment source of truth එකයි
 
-The cluster should match GitOps repo.
+GitOps repo එකේ image tag එක වෙනස් වුණාම Argo CD ඒ desired state එක cluster එකට apply කරනවා.
 
-If GitOps repo says:
+Example:
 
-    store-front:stage12-v1
+    GitOps repo says:
+      store-front:stage12-v1
 
-Argo CD makes the cluster run:
+    Argo CD makes AKS run:
+      store-front:stage12-v1
 
-    store-front:stage12-v1
+### 3. App repo සහ GitOps repo වෙන වෙනම තියෙනවා
 
-### 3. App repo and GitOps repo are separate
+App repo එක image build කරනවා.
 
-App repo builds the image.
+GitOps repo එක run වෙන්න ඕන image version එක declare කරනවා.
 
-GitOps repo declares which image should run.
+මේ separation එක production වල common pattern එකක්.
 
-This separation is common in production.
+### 4. Single main branch එකෙන් multiple environments manage කරන්න පුළුවන්
 
-### 4. One branch can manage multiple environments
+GitOps repo එකේ one main branch + environment folders pattern එක use කරන්න පුළුවන්.
 
-A GitOps repo can use one main branch and separate environment folders.
-
-Example future structure:
+Future structure:
 
     overlays/dev
     overlays/qa
     overlays/prod
 
-Argo CD apps can watch different paths in the same branch.
+Argo CD apps තුනක් same branch එකේ different paths watch කරන්න පුළුවන්.
 
-This avoids unnecessary branch drift.
+### 5. Build once, promote same image
 
-### 5. Build once, promote the same image
-
-Future promotion flow should not rebuild for QA or Prod.
+Future promotion flow එකේ QA/Prod වලට image rebuild කරන්න හොඳ නැහැ.
 
 Good pattern:
 
-    Build store-front:sha-or-version once
+    Build image once
     Deploy same image to Dev
     Promote same image to QA
     Promote same image to Prod
@@ -531,8 +570,8 @@ Good pattern:
 Possible reasons:
 
     GITOPS_REPO_TOKEN missing
-    Token does not have access to GitOps repo
-    Token does not have Contents read/write permission
+    Token එකට GitOps repo access නැහැ
+    Token එකට Contents read/write permission නැහැ
 
 Check:
 
@@ -540,18 +579,19 @@ Check:
 
 Fix:
 
-    Create fine-grained token with access to GitOps repo.
-    Give Contents read/write permission.
-    Save as GITOPS_REPO_TOKEN.
+    Fine-grained token එකක් create කරන්න.
+    GitOps repo එකට access දෙන්න.
+    Contents read/write permission දෙන්න.
+    GITOPS_REPO_TOKEN ලෙස save කරන්න.
 
 ### Issue 2 - GitOps file path wrong
 
-Symptom:
+Symptoms:
 
     sed: file not found
     grep cannot find image line
 
-Check variable:
+Check variables:
 
     gh variable list
 
@@ -561,49 +601,49 @@ Expected:
 
 Fix:
 
-    Set correct manifest path.
+    Correct manifest path එක variable එකට set කරන්න.
 
 ### Issue 3 - No GitOps changes to commit
 
 Reason:
 
-    The GitOps repo already has the same image tag.
+    GitOps repo එකේ already same image tag එක තියෙන්න පුළුවන්.
 
-This is not always an error.
+මෙය හැමවිටම error එකක් නෙවෙයි.
 
-The workflow can exit safely if no diff exists.
+Workflow එක no diff නම් safely exit වෙන්න පුළුවන්.
 
-### Issue 4 - Argo CD not updated
+### Issue 4 - Argo CD update නොවීම
 
-Check Argo CD:
+Check:
 
     kubectl get application capstone-store-dev -n argocd
 
-Check GitOps latest commit:
+GitOps latest commit check කරන්න:
 
     git log --oneline -5
 
 Possible reasons:
 
-    Argo CD has not refreshed yet
-    Wrong GitOps path
-    Wrong Argo CD application source path
+    Argo CD refresh වීමට තව වෙලාවක් ගන්නවා
+    wrong GitOps path
+    wrong Argo CD application source path
 
-### Issue 5 - Store-front still old image
+### Issue 5 - store-front තවම old image එක use කිරීම
 
-Check deployment image:
+Check:
 
     kubectl get deployment store-front -n capstone-dev -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 
 If old image remains:
 
-    Check GitOps repo image tag
-    Check Argo CD sync status
-    Check Argo CD application source path
+    GitOps repo image tag check කරන්න
+    Argo CD sync status check කරන්න
+    Argo CD application source path check කරන්න
 
 ### Issue 6 - Pod ImagePullBackOff
 
-Check pod:
+Check:
 
     kubectl describe pod <pod-name> -n capstone-dev
 
@@ -613,23 +653,23 @@ Possible reasons:
     Image tag does not exist
     Wrong image architecture
 
-Fixes:
+Fix:
 
-    Verify ACR tag exists
-    Verify AKS has AcrPull permission
-    Build image with linux/amd64
+    ACR tag exists ද check කරන්න
+    AKS AcrPull permission check කරන්න
+    linux/amd64 image build කරන්න
 
 ## Learner summary
 
-Stage 12 is where CI/CD starts to feel real.
+Stage 12 එකෙන් CI/CD flow එක real විදිහට connect වුණා.
 
 Key lesson:
 
-    GitHub Actions does not directly deploy to Kubernetes.
-    It builds the image and updates GitOps desired state.
-    Argo CD watches GitOps and deploys Dev.
+    GitHub Actions Kubernetes cluster එකට direct deploy කරන්නේ නැහැ.
+    GitHub Actions image build කරලා GitOps repo එක update කරනවා.
+    Argo CD GitOps repo එක watch කරලා Dev environment එක deploy කරනවා.
 
-This gives a clean production-style delivery flow:
+Final flow:
 
     App source code
         -> CI image build
@@ -640,4 +680,4 @@ This gives a clean production-style delivery flow:
 
 Next stage:
 
-    Stage 13 - Add DevSecOps checks to the app CI pipeline
+    Stage 13 - App CI pipeline එකට DevSecOps checks add කිරීම
