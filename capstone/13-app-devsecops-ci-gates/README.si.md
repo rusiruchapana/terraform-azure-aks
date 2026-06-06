@@ -447,185 +447,281 @@ Use placeholder:
 
     <gateway-public-ip>
 
-## Final verified state
+## Final verified state - අවසාන verified තත්ත්වය
 
-Stage 13 final verified state:
+Stage 13 අවසානයේ verify කළ තත්ත්වය මෙහෙමයි.
 
-    GitHub Actions:
-      DevSecOps workflow success
+GitHub Actions workflow එක:
 
-    Gitleaks:
-      Passed
+    DevSecOps workflow success
 
-    Trivy filesystem scan:
-      Passed for ./src/store-front
+Gitleaks secret scan එක:
 
-    Docker image:
-      store-front:stage13-v1 built and pushed
+    Passed
 
-    Trivy image scan:
-      0 vulnerabilities detected in final runtime image
+Trivy filesystem scan එක:
 
-    GitOps:
-      Deploy store-front stage13-v1 to dev commit pushed
+    ./src/store-front path එකට scoped කරලා pass වුණා
 
-    Argo CD:
-      Revision matched GitOps HEAD
-      Synced / Healthy
+Docker image එක:
 
-    AKS:
-      store-front runs stage13-v1
-      pod 1/1 Running
+    store-front:stage13-v1 build කරලා ACR එකට push වුණා
 
-    Gateway:
-      HTTP 200
+Trivy image scan එක:
 
-## Production learning points
+    final runtime image එකේ vulnerabilities 0 ලෙස report වුණා
 
-### 1. DevSecOps gates must block deployment
+GitOps repo එක:
 
-Stage 13 first failed at Gitleaks.
-Then failed at Trivy filesystem scan.
+    Deploy store-front stage13-v1 to dev commit එක push වුණා
 
-That is good.
+Argo CD:
 
-A security gate should stop unsafe or unclear changes before deploy.
+    GitOps HEAD revision එකට match වුණා
+    Synced / Healthy වුණා
 
-### 2. Findings need investigation
+AKS:
 
-Not every finding means delete files immediately.
+    store-front deployment එක stage13-v1 image එක run කළා
+    pod එක 1/1 Running වුණා
 
-You must ask:
+Gateway:
 
-    Is it a real secret?
-    Is it a sample file?
-    Is it used by deployment?
-    Is it in current source or old history?
-    Is it relevant to this component?
+    HTTP 200 response එක ලැබුණා
 
-### 3. Monorepo scans need correct scope
+## Production learning points - production වලට වැදගත් පාඩම්
 
-Root scan can be useful for full-repo security jobs.
+### 1. DevSecOps gates deployment එක block කරන්න ඕන
 
-But component deployment pipeline should scan the component it deploys.
+Stage 13 මුලින් Gitleaks step එකේදී fail වුණා.
 
-For store-front:
+ඊට පස්සේ Trivy filesystem scan එකේදී fail වුණා.
+
+මේක වැරැද්දක් නෙවෙයි. ඒක DevSecOps gate එකේ purpose එක.
+
+Security හෝ quality issue එකක් clear නැත්නම්:
+
+    image build නොවෙන්න ඕන
+    image push නොවෙන්න ඕන
+    GitOps repo update නොවෙන්න ඕන
+    Dev deploy නොවෙන්න ඕන
+
+ඒකෙන් unsafe change එකක් environment එකට යාම නවත්වනවා.
+
+### 2. Finding එකක් ආවම investigate කරන්න ඕන
+
+Security tool එකක් issue එකක් detect කළා කියලා හැම වෙලාවෙම file delete කරන්න හොඳ නැහැ.
+
+මුලින් අහන්න ඕන ප්‍රශ්න:
+
+    මේක real secret එකක්ද?
+    මේක sample/demo file එකක්ද?
+    මේ file එක actual deployment එකට use වෙනවද?
+    මේක current source එකේද, නැත්නම් old git history එකේද?
+    මේ issue එක මේ component එකට relevant ද?
+
+Stage 13 වලදී Gitleaks detect කළ files upstream sample Kubernetes Secret YAML files.
+
+ඒ නිසා අපි files blind delete කළේ නැහැ.
+
+අපි කළේ:
+
+    files keep කළා
+    known sample manifests narrow allowlist කළා
+    secret scan එක අනෙක් files වලට active තියාගත්තා
+
+### 3. Monorepo එකක scan scope එක හරි වෙන්න ඕන
+
+Repo එකේ services කිහිපයක් තියෙනවා නම් root scan එකකින් අනිත් services වල issues detect වෙන්න පුළුවන්.
+
+Stage 13 pipeline එක deploy කළේ:
+
+    store-front
+
+ඒ නිසා blocking filesystem scan එකට use කළ path එක:
 
     ./src/store-front
 
-### 4. Source scan and image scan are different
+මෙහි අදහස:
 
-Source scan checks source/dependencies/config.
+    store-front pipeline එක store-front source scan කරනවා
+    product-service pipeline එක product-service source scan කරන්න ඕන
+    order-service pipeline එක order-service source scan කරන්න ඕන
 
-Image scan checks final container runtime artifact.
+Full repo security scan එකක් වෙනම scheduled workflow එකක් ලෙස add කරන්න පුළුවන්.
 
-Both are useful.
+### 4. Source scan සහ image scan එකම දෙයක් නෙවෙයි
 
-### 5. GitOps update and cluster sync are separate
+Trivy filesystem scan එක බලන්නේ:
 
-GitOps commit means desired state changed.
+    source files
+    dependency files
+    config files
 
-Argo CD sync means cluster applied that desired state.
+Trivy image scan එක බලන්නේ:
 
-Always verify both.
+    final container image එක
 
-## Troubleshooting
+මේ දෙකම වැදගත්.
 
-### Issue 1 - Gitleaks detects Kubernetes Secret YAML
+Source scan එක development side risk හොයනවා.
 
-Check finding:
+Image scan එක runtime artifact එකේ risk හොයනවා.
+
+### 5. Multi-stage Docker build එක නිසා final image clean වෙන්න පුළුවන්
+
+Build log එකේ npm audit warnings තිබුණත් final image scan එක 0 vulnerabilities කියලා පෙන්වන්න පුළුවන්.
+
+හේතුව:
+
+    builder stage එකේ Node dependencies install වෙනවා
+    frontend build output එක generate වෙනවා
+    runtime stage එකේ nginx image එකට static files copy වෙනවා
+
+Final runtime image එකේ Node dependencies නැති නම්, image scan එක clean වෙන්න පුළුවන්.
+
+නමුත් npm audit warnings ignore කරන්න කියන එක නෙවෙයි.
+
+ඒ නිසා source scan එකත් තියාගන්න ඕන, image scan එකත් තියාගන්න ඕන.
+
+### 6. GitOps update වුණා කියලා cluster update assume කරන්න එපා
+
+GitOps repo එකට commit එක push වුණා කියලා cluster එක ඒ මොහොතේම update වෙලා කියලා assume කරන්න බැහැ.
+
+Separate verification ඕන:
+
+    GitOps repo image line එක check කරන්න
+    Argo CD revision එක GitOps HEAD එකට match වෙනවද බලන්න
+    Argo CD Synced / Healthy ද බලන්න
+    AKS deployment image එක check කරන්න
+    pod Running ද බලන්න
+    Gateway HTTP 200 ද බලන්න
+
+Stage 13 වලදී Argo CD revision එක initially behind තිබුණා.
+
+Hard refresh කළාට පස්සේ latest GitOps commit එක pick කරලා rollout complete වුණා.
+
+## Troubleshooting - ගැටළු විසඳීම
+
+### Issue 1 - Gitleaks Kubernetes Secret YAML detect කරනවා
+
+Gitleaks output එකෙන් මේ details බලන්න:
 
     RuleID
     File
     Line
     Fingerprint
 
-Do not paste secret values into chat or tickets.
+Secret value එක chat, ticket, documentation වල paste කරන්න එපා.
 
-If real secret:
+If real secret එකක් නම්:
 
-    rotate/revoke it
-    remove it from repo
-    move it to secure secret store
+    secret එක rotate/revoke කරන්න
+    repo එකෙන් remove කරන්න
+    GitHub Secrets / Azure Key Vault වගේ secure place එකකට move කරන්න
 
-If known sample manifest:
+If known sample manifest එකක් නම්:
 
-    document reason
-    use narrow allowlist
+    reason එක document කරන්න
+    narrow allowlist එකක් use කරන්න
+    full scan disable කරන්න එපා
 
-### Issue 2 - Trivy filesystem scan fails on unrelated services
+### Issue 2 - Trivy filesystem scan unrelated services නිසා fail වෙනවා
 
-Check scan scope.
+මෙය monorepo/project repo වල common issue එකක්.
 
-If pipeline deploys store-front only:
+Pipeline එක deploy කරන්නේ store-front නම්:
 
-    scan-ref should be ./src/store-front
+    scan-ref: ./src/store-front
 
-Do not block store-front deployment because of unrelated service dependency unless this is a full monorepo security workflow.
+Root scan එකක් අවශ්‍ය නම් ඒක වෙනම full-repo security workflow එකක් ලෙස තියාගන්න.
 
-### Issue 3 - Image scan fails
+### Issue 3 - Trivy image scan fail වෙනවා
 
-This is more serious for deployment.
+Image scan fail වුණොත් ඒක serious.
 
-Image scan checks the actual image that will run.
+මොකද ඒ scan එක actual run වෙන container image එක scan කරනවා.
 
-Options:
+Possible fixes:
 
-    update base image
-    update packages
-    rebuild image
-    use patched dependency versions
+    base image update කරන්න
+    package versions update කරන්න
+    dependency versions patch කරන්න
+    image rebuild කරන්න
 
-### Issue 4 - GitOps commit pushed but cluster still old image
+Image scan fail වෙලා තියෙද්දී GitOps update/deploy යන්න හොඳ නැහැ.
 
-Check Argo CD revision:
+### Issue 4 - GitOps commit push වුණත් cluster එක old image එක run කරනවා
+
+Argo CD revision එක check කරන්න:
 
     kubectl get application capstone-store-dev -n argocd \
       -o jsonpath='{.status.sync.revision}{"\n"}'
 
-Compare with:
+GitOps repo HEAD එක check කරන්න:
 
     git rev-parse HEAD
 
-If revision is behind, wait or hard refresh:
+මේ දෙක match වෙන්න ඕන.
+
+If Argo CD revision එක behind නම්:
+
+    ටිකක් wait කරන්න
+
+නැත්නම් hard refresh කරන්න:
 
     kubectl annotate application capstone-store-dev -n argocd \
       argocd.argoproj.io/refresh=hard \
       --overwrite
 
-### Issue 5 - gh run command fails in wrong repo
+ඊට පස්සේ rollout verify කරන්න.
 
-GitHub Actions run is in app repo.
+### Issue 5 - gh run command wrong repo එකේ run කරනවා
 
-Run app workflow commands from:
+Stage 13 workflow run එක තියෙන්නේ app repo එකේ.
+
+App pipeline commands run කරන්න:
 
     aks-capstone-store-app
 
-GitOps verification commands run from:
+GitOps verification commands run කරන්න:
 
     aks-capstone-gitops
 
-## Learner summary
+Terraform guide/documentation commands run කරන්න:
 
-Stage 13 is where the pipeline becomes a real DevSecOps pipeline.
+    terraform-azure-aks
 
-Before this stage:
+Repo එක confuse වුණොත් මේ command එකෙන් current repo බලන්න:
 
-    Build and deploy worked
+    git remote -v
 
-After this stage:
+## Learner summary - ඉගෙනගන්න ප්‍රධාන අදහස
 
-    Build and deploy happen only after security gates pass
+Stage 13 එකෙන් pipeline එක real DevSecOps pipeline එකක් වුණා.
 
-Final flow:
+Before Stage 13:
+
+    image build වුණා
+    image push වුණා
+    GitOps update වුණා
+    Dev deploy වුණා
+
+After Stage 13:
+
+    security gates pass වුණොත් විතරයි build/push/deploy වෙන්නේ
+
+Final flow එක:
 
     Secret scan
         -> dependency/source scan
         -> build image
         -> image scan
         -> push image
-        -> update GitOps
+        -> update GitOps repo
         -> Argo CD deploys Dev
+
+මේක production-style delivery flow එකක්.
 
 Next stage:
 
