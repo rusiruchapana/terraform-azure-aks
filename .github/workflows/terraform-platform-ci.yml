@@ -13,27 +13,40 @@ permissions:
   contents: read
 
 jobs:
-  terraform-ci:
-    name: Validate Terraform platform code
+  terraform-format:
+    name: Terraform Format
     runs-on: ubuntu-latest
 
     steps:
-      - name: "[01] Checkout repository"
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: "[02] Set up Terraform"
+      - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.8
 
-      - name: "[03] Terraform format check"
+      - name: Check Terraform formatting
         run: |
           set -euo pipefail
-
-          echo "Checking Terraform formatting..."
           terraform fmt -check -recursive
 
-      - name: "[04] Define Terraform root directories"
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    needs:
+      - terraform-format
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Define Terraform root directories
         run: |
           set -euo pipefail
 
@@ -45,29 +58,54 @@ jobs:
             "environments/prod" \
             > /tmp/terraform-dirs.txt
 
-          echo "Terraform root directories selected for CI:"
+          echo "Terraform root directories selected for validation:"
           cat /tmp/terraform-dirs.txt
 
-      - name: "[05] Terraform init and validate"
+      - name: Run terraform init and validate
         run: |
           set -euo pipefail
 
           while read -r dir; do
             echo
             echo "========================================"
-            echo "Validating Terraform directory: ${dir}"
+            echo "Validating Terraform root directory: ${dir}"
             echo "========================================"
 
             terraform -chdir="${dir}" init -backend=false -input=false
             terraform -chdir="${dir}" validate
           done < /tmp/terraform-dirs.txt
 
-      - name: "[06] Set up TFLint"
+  tflint:
+    name: TFLint
+    runs-on: ubuntu-latest
+    needs:
+      - terraform-validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up TFLint
         uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: v0.53.0
 
-      - name: "[07] Run TFLint"
+      - name: Define Terraform root directories
+        run: |
+          set -euo pipefail
+
+          printf "%s\n" \
+            "bootstrap/state-storage" \
+            "environments/capstone-platform" \
+            "environments/dev" \
+            "environments/qa" \
+            "environments/prod" \
+            > /tmp/terraform-dirs.txt
+
+          echo "Terraform root directories selected for TFLint:"
+          cat /tmp/terraform-dirs.txt
+
+      - name: Run TFLint
         run: |
           set -euo pipefail
 
@@ -84,18 +122,28 @@ jobs:
             )
           done < /tmp/terraform-dirs.txt
 
-      - name: "[08] Set up Python for Checkov"
+  checkov:
+    name: Checkov Security Scan
+    runs-on: ubuntu-latest
+    needs:
+      - tflint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python for Checkov
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: "[09] Install Checkov"
+      - name: Install Checkov
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install checkov
 
-      - name: "[10] Run Checkov IaC scan"
+      - name: Run Checkov IaC scan
         run: |
           set -euo pipefail
 
@@ -107,19 +155,28 @@ jobs:
             --skip-path .terraform \
             --skip-path .local-backups
 
-      - name: "[11] Terraform CI summary"
-        if: always()
+  terraform-ci-summary:
+    name: Terraform CI Summary
+    runs-on: ubuntu-latest
+    needs:
+      - terraform-format
+      - terraform-validate
+      - tflint
+      - checkov
+    if: always()
+
+    steps:
+      - name: Write Terraform CI summary
         run: |
           {
             echo "# Terraform Platform CI Summary"
             echo
-            echo "| Check | Purpose |"
-            echo "|---|---|"
-            echo "| Terraform fmt | Checks consistent Terraform formatting |"
-            echo "| Terraform init -backend=false | Downloads providers without touching remote state |"
-            echo "| Terraform validate | Validates Terraform configuration syntax and references |"
-            echo "| TFLint | Finds Terraform linting and provider usage issues |"
-            echo "| Checkov | Scans Terraform for IaC security and best-practice issues |"
+            echo "| Gate | Result | Purpose |"
+            echo "|---|---|---|"
+            echo "| Terraform Format | ${{ needs.terraform-format.result }} | Checks consistent Terraform formatting |"
+            echo "| Terraform Validate | ${{ needs.terraform-validate.result }} | Runs init with backend disabled and validates Terraform root modules |"
+            echo "| TFLint | ${{ needs.tflint.result }} | Finds Terraform linting and provider usage issues |"
+            echo "| Checkov Security Scan | ${{ needs.checkov.result }} | Scans Terraform for IaC security and best-practice issues using the documented baseline |"
             echo
             echo "This workflow does not run terraform apply or terraform destroy."
           } >> "$GITHUB_STEP_SUMMARY"
