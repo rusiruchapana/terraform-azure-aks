@@ -23,7 +23,7 @@
 13. AIOps PR remediation workflow prove කිරීම
 14. AIOps Incident Dashboard UI add කිරීම
 
-## Important note about AIOps
+## AIOps scope
 
 මෙම project එකේ official AIOps scope එක දැනට:
 
@@ -34,8 +34,6 @@
     GitOps validation
     Argo CD recovery
     AIOps incident dashboard visibility
-
-AIOps detector / automatic incident detection CronJob එක මෙම documentation story එකට දැනට include කරන්නේ නැහැ. එය future design එකක් ලෙස later redesign කළ හැක.
 
 ## Tool stack
 

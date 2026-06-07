@@ -430,7 +430,7 @@ Commands:
 
 ## Production learning points
 
-### 1. AIOps should not blindly auto-fix everything
+### 1. AIOps should not blindly remediate everything
 
 හැම incident එකකටම PR create කරන්න එපා.
 
