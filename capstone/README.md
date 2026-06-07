@@ -324,14 +324,3 @@ Safety points:
     project finish කළාම resources cleanup කරන්න
     Terraform state safe තබන්න
     secrets, tokens, personal paths, live IP-specific notes commit කරන්න එපා
-
-## Next documentation tasks
-
-Next cleanup tasks:
-
-    root README.md update කිරීම
-    ROADMAP.md update කිරීම
-    workflow run order document කිරීම
-    cost and cleanup guide add කිරීම
-    architecture diagrams add කිරීම
-    final demo guide add කිරීම
