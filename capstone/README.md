@@ -18,6 +18,13 @@
     AIOps PR remediation workflow එක prove කිරීම
     AIOps Incident Dashboard UI එක add කිරීම
 
+
+## Capstone Project Architecture
+
+<p align="center">
+  <img src="images/aks_capstone_project_technical_architecture.png" alt="AKS Capstone Project Architecture" width="100%">
+</p>
+
 ## Project එකේ official story එක
 
 මෙම capstone project එකේ official story එක මෙහෙමයි:
