@@ -327,3 +327,5 @@ Safety points:
     project finish කළාම resources cleanup කරන්න
     Terraform state safe තබන්න
     secrets, tokens, personal paths, live IP-specific notes commit කරන්න එපා
+
+- [Stage 24 - Cost and Cleanup Guide](24-cost-and-cleanup-guide/README.si.md)
