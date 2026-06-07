@@ -10,6 +10,12 @@ This project is designed for:
 - Learners building a portfolio-ready AKS platform engineering capstone project
 
 
+## Platform Architecture
+
+<p align="center">
+  <img src="images/terraform_aks_platform_architecture_diagram.png" alt="terraform-azure-aks Platform Architecture" width="100%">
+</p>
+
 ## Project areas
 
 This repository contains two main learning areas:
