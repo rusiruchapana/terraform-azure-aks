@@ -1,0 +1,45 @@
+# Checkov baseline for the AKS capstone learning environment.
+#
+# This repository is a low-cost learning capstone, not a fully locked-down
+# enterprise production landing zone.
+#
+# The skipped checks below are intentionally documented exceptions for:
+# - Azure Free Trial / Pay-As-You-Go cost control
+# - GitHub-hosted runner accessibility
+# - avoiding private endpoint / CMK / paid SLA complexity in the learning path
+#
+# These are not recommendations for a regulated production environment.
+# A production version should revisit these controls.
+
+skip-check:
+  # Terraform state storage account exceptions.
+  # Accepted because this learning capstone keeps the backend reachable from
+  # local machines and GitHub-hosted runners without private networking.
+  - CKV_AZURE_33      # Storage Queue logging for read/write/delete requests
+  - CKV_AZURE_206     # Geo/zone-redundant storage replication instead of LRS
+  - CKV_AZURE_59      # Storage account public network access / public access policy
+  - CKV2_AZURE_33     # Storage account private endpoint
+  - CKV2_AZURE_41     # SAS expiration policy
+  - CKV2_AZURE_1      # Customer-managed key for storage
+  - CKV2_AZURE_21     # Blob service read logging
+  - CKV2_AZURE_40     # Disable shared key authorization
+
+  # AKS enterprise hardening exceptions.
+  # Accepted because this capstone prioritizes a low-cost public learning cluster.
+  - CKV_AZURE_227     # Host-based encryption / temp disk and cache encryption
+  - CKV_AZURE_226     # Ephemeral OS disks
+  - CKV_AZURE_171     # AKS automatic upgrade channel
+  - CKV_AZURE_117     # AKS disk encryption set
+  - CKV_AZURE_116     # Azure Policy add-on
+  - CKV_AZURE_170     # Paid SLA tier
+  - CKV_AZURE_4       # Azure Monitor logging integration
+  - CKV_AZURE_141     # Disable local admin account
+  - CKV_AZURE_168     # Minimum 50 pods per node
+  - CKV_AZURE_172     # Secrets Store CSI driver secret autorotation
+  - CKV_AZURE_6       # API server authorized IP ranges
+  - CKV_AZURE_115     # Private AKS cluster
+
+  # Key Vault private endpoint exception.
+  # Accepted because the learning cluster uses public access with RBAC and
+  # workload identity to reduce networking complexity.
+  - CKV2_AZURE_32     # Key Vault private endpoint

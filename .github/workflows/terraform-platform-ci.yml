@@ -102,6 +102,7 @@ jobs:
           checkov \
             --directory . \
             --framework terraform \
+            --config-file .checkov.yml \
             --quiet \
             --skip-path .terraform \
             --skip-path .local-backups
