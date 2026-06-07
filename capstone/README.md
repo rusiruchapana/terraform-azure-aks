@@ -1,73 +1,97 @@
 # Enterprise AKS DevOps / DevSecOps / Platform Engineering Capstone
 
-මෙම capstone project එකේදී Azure AKS මත production-style platform engineering, GitOps, DevSecOps, monitoring, release promotion, and AIOps remediation workflow එකක් build කරනවා.
+මෙම capstone project එකේදී Azure AKS මත production-style platform engineering project එකක් step by step build කරනවා.
 
-මෙය app එකක් deploy කරන simple lab එකක් නෙවෙයි. මෙහි goal එක තමයි real-world platform engineering project එකක වගේ infrastructure, application delivery, GitOps, security checks, environment promotion, incident remediation, and UI visibility එකක් step by step build කිරීම.
+මෙය simple app deployment lab එකක් නෙවෙයි. මෙහි අරමුණ වන්නේ real-world cloud platform එකක තියෙන ප්‍රධාන කොටස් එකට connect කරලා ඉගෙනගැනීමයි.
 
-## Current official project story
+මෙම project එකෙන් cover කරන්නේ:
 
-මෙම capstone එකේ official story එක:
+    Terraform මගින් AKS platform එක build කිරීම
+    Argo CD මගින් GitOps workflow එක build කිරීම
+    Gateway API සහ NGINX Gateway Fabric setup කිරීම
+    Prometheus, Grafana, Alertmanager මගින් monitoring setup කිරීම
+    OpenTelemetry මගින් observability setup කිරීම
+    GitHub Actions මගින් application CI/CD build කිරීම
+    DevSecOps scans සහ quality gates add කිරීම
+    Dev, QA, Prod environments අතර promotion workflow එක build කිරීම
+    Terraform platform CI add කිරීම
+    AIOps PR remediation workflow එක prove කිරීම
+    AIOps Incident Dashboard UI එක add කිරීම
 
-1. Terraform මගින් AKS platform එක provision කිරීම
-2. Argo CD මගින් GitOps foundation එක build කිරීම
-3. Gateway API / NGINX Gateway Fabric setup කිරීම
-4. Monitoring and observability setup කිරීම
-5. Capstone Store app එක Dev environment එකට deploy කිරීම
-6. App image ACR එකෙන් build/deploy කිරීම
-7. GitHub Actions CI pipeline මගින් image build, scan, push, and GitOps update කිරීම
-8. GitOps validation pipeline එකෙන් Kubernetes manifests validate කිරීම
-9. Dev release end-to-end verify කිරීම
-10. Dev → QA → Prod promotion workflow build කිරීම
-11. Terraform platform CI and security gates add කිරීම
-12. Pipeline visibility improve කිරීම
-13. AIOps PR remediation workflow prove කිරීම
-14. AIOps Incident Dashboard UI add කිරීම
+## Project එකේ official story එක
+
+මෙම capstone project එකේ official story එක මෙහෙමයි:
+
+1. Terraform මගින් AKS platform එක provision කරනවා.
+2. Kubernetes access සහ cluster verification කරනවා.
+3. Argo CD install කරලා GitOps foundation එක setup කරනවා.
+4. Gateway API සහ NGINX Gateway Fabric setup කරනවා.
+5. Monitoring stack එක install කරලා Grafana / Prometheus / Alertmanager setup කරනවා.
+6. OpenTelemetry observability foundation එක add කරනවා.
+7. Capstone Store app එක Dev environment එකට GitOps මගින් deploy කරනවා.
+8. App capacity, node pool, cost guardrails, සහ Terraform drift fix කරනවා.
+9. Dev app supporting components add කරනවා.
+10. store-front image එක ACR එකෙන් build/deploy කරනවා.
+11. GitHub Actions OIDC මගින් ACR build foundation එක හදනවා.
+12. CI pipeline එක GitOps repo එක update කරලා Dev deploy කරනවා.
+13. DevSecOps quality gates add කරනවා.
+14. GitOps manifest validation pipeline එක add කරනවා.
+15. Dev release end-to-end verify කරනවා.
+16. Dev සිට QA සහ Prod දක්වා same image promote කරනවා.
+17. Pipeline visibility සහ release flow explain කරනවා.
+18. Terraform platform CI සහ security gates add කරනවා.
+19. AIOps PR remediation workflow එක prove කරනවා.
+20. AIOps Incident Dashboard UI එක add කරනවා.
 
 ## AIOps scope
 
-මෙම project එකේ official AIOps scope එක දැනට:
+මෙම project එකේ AIOps කොටස දැනට cover කරන්නේ:
 
-    Evidence collection
-    Root cause explanation
-    GitHub PR remediation
-    Human review and merge
-    GitOps validation
-    Argo CD recovery
-    AIOps incident dashboard visibility
+    incident evidence collect කිරීම
+    root cause explain කිරීම
+    safe GitHub PR remediation කිරීම
+    human review සහ merge කිරීම
+    GitOps validation run වීම
+    Argo CD මගින් recovery apply වීම
+    AIOps dashboard එකෙන් incident report පෙන්වීම
+
+AIOps fix එක direct cluster patch එකක් ලෙස කරන්නේ නැහැ. Fix එක GitHub PR එකක් ලෙස create කරලා human approval එකෙන් පස්සේ GitOps workflow එකෙන් apply වෙනවා.
 
 ## Tool stack
 
-- Terraform
-- Azure AKS
-- Azure Container Registry
-- GitHub Actions
-- Argo CD
-- Gateway API
-- NGINX Gateway Fabric
-- Prometheus
-- Grafana
-- Alertmanager
-- OpenTelemetry Collector
-- Trivy
-- Gitleaks
-- Checkov
-- TFLint
-- kubeconform
-- Kustomize
-- AIOps PR remediation
-- AIOps Incident Dashboard
+මෙම project එකේ main tools:
+
+    Terraform
+    Azure AKS
+    Azure Container Registry
+    GitHub Actions
+    Argo CD
+    Gateway API
+    NGINX Gateway Fabric
+    Prometheus
+    Grafana
+    Alertmanager
+    OpenTelemetry Collector
+    Trivy
+    Gitleaks
+    Checkov
+    TFLint
+    kubeconform
+    Kustomize
+    AIOps PR remediation
+    AIOps Incident Dashboard
 
 ## Repository model
 
 මෙම capstone project එක repositories තුනකින් manage කරනවා.
 
-### 1. Platform repository
+## 1. Platform repository
 
 Repository:
 
     terraform-azure-aks
 
-Purpose:
+මෙම repo එකේ තියෙන්නේ:
 
     Terraform platform infrastructure
     AKS platform setup
@@ -75,28 +99,28 @@ Purpose:
     capstone Sinhala guides
     local UI helper scripts
 
-### 2. Application repository
+## 2. Application repository
 
 Repository:
 
     aks-capstone-store-app
 
-Purpose:
+මෙම repo එකේ තියෙන්නේ:
 
     application source code
-    GitHub Actions app CI
+    GitHub Actions application CI
     Dev image build and scan
     ACR push
     Dev GitOps update
     Dev release verification
 
-### 3. GitOps repository
+## 3. GitOps repository
 
 Repository:
 
     aks-capstone-gitops
 
-Purpose:
+මෙම repo එකේ තියෙන්නේ:
 
     Kubernetes manifests
     Kustomize overlays
@@ -104,17 +128,15 @@ Purpose:
     Dev / QA / Prod desired state
     GitOps validation pipeline
     promotion workflow
-    AIOps demo and dashboard manifests
+    AIOps demo සහ dashboard manifests
 
 ## Environment model
 
-The capstone application uses three environments:
+Application environments:
 
     Dev
     QA
     Prod
-
-Each environment is managed through GitOps overlays.
 
 Main namespaces:
 
@@ -124,17 +146,21 @@ Main namespaces:
     capstone-aiops-demo
     capstone-aiops
 
+Dev, QA, Prod environments GitOps overlays මගින් manage කරනවා.
+
 ## UI separation
 
-මෙම capstone එකේ UI layers වෙනම තබාගන්නවා.
+මෙම project එකේ operational UIs වෙන වෙනම තබනවා.
 
-### Monitoring UI
+## Monitoring UI
 
-Purpose:
+Monitoring UI එකෙන් බලන්නේ:
 
     metrics
     alerts
-    pod/node health
+    pod health
+    node health
+    resource usage
     observability dashboards
 
 Examples:
@@ -143,24 +169,25 @@ Examples:
     Prometheus
     Alertmanager
 
-### Argo CD UI
+## Argo CD UI
 
-Purpose:
+Argo CD UI එකෙන් බලන්නේ:
 
-    GitOps application sync status
+    application sync status
     health status
     Git revision
     manifest diff
     sync history
+    deployment tree
 
-### AIOps UI
+## AIOps UI
 
-Purpose:
+AIOps UI එකෙන් බලන්නේ:
 
     incident summary
     evidence
     root cause
-    PR remediation action
+    remediation PR
     recovery status
 
 AIOps Dashboard local URL:
@@ -201,25 +228,25 @@ Local UI helper scripts:
 
 ## Main workflows
 
-### Platform repository workflows
+## Platform repository workflow
 
 Repository:
 
     terraform-azure-aks
 
-Main workflow:
+Workflow:
 
     Terraform Platform CI
 
-Purpose:
+මෙම workflow එකෙන් කරන්නේ:
 
-    Terraform formatting
-    Terraform init/validate
-    TFLint
+    Terraform format check
+    Terraform init and validate
+    TFLint validation
     Checkov IaC scan
     platform CI summary
 
-### Application repository workflows
+## Application repository workflows
 
 Repository:
 
@@ -234,9 +261,9 @@ Legacy workflow:
 
     Legacy - Build store-front image to ACR
 
-The legacy workflow is kept for earlier-stage reference only. The main Dev workflow is the GitOps-based workflow.
+Legacy workflow එක earlier stages reference සඳහා තබා තිබෙනවා. Main Dev deployment workflow එක GitOps-based workflow එකයි.
 
-### GitOps repository workflows
+## GitOps repository workflows
 
 Repository:
 
@@ -247,16 +274,17 @@ Main workflows:
     Validate GitOps manifests
     Promote store-front image
 
-Purpose:
+මෙම workflows වලින් කරන්නේ:
 
-    YAML validation
+    YAML syntax validation
     Kustomize render
     kubeconform validation
-    Dev / QA / Prod promotion
+    QA / Prod promotion
+    GitOps summary
 
 ## Current stable checkpoint
 
-At the current checkpoint:
+Current checkpoint එකේ expected Argo CD state එක:
 
     capstone-store-dev Synced / Healthy
     capstone-store-qa Synced / Healthy
@@ -270,40 +298,40 @@ AIOps Dashboard:
 
 ## Recommended demo flow
 
-A good demo order:
+Project demo එකක් කරන විට හොඳ order එක:
 
-1. Show platform repository structure
-2. Show Terraform Platform CI
-3. Show application CI workflow
-4. Show GitOps validation workflow
-5. Show Dev release verification workflow
-6. Show QA/Prod promotion workflow
-7. Show Argo CD applications
-8. Show Monitoring UI
-9. Show AIOps Dashboard UI
-10. Explain AIOps PR remediation flow
+1. Platform repository structure පෙන්වන්න.
+2. Terraform Platform CI පෙන්වන්න.
+3. Application CI workflow පෙන්වන්න.
+4. GitOps validation workflow පෙන්වන්න.
+5. Dev release verification workflow පෙන්වන්න.
+6. QA / Prod promotion workflow පෙන්වන්න.
+7. Argo CD applications පෙන්වන්න.
+8. Monitoring UI explain කරන්න.
+9. AIOps Dashboard UI පෙන්වන්න.
+10. AIOps PR remediation flow explain කරන්න.
 
 ## Cost and safety notes
 
-This project can create Azure resources that cost money.
+මෙම project එක Azure resources create කරන නිසා cost generate විය හැක.
 
-Important safety points:
+Safety points:
 
-    Keep budget alerts enabled.
-    Avoid unnecessary public LoadBalancer services.
-    Prefer ClusterIP for internal services.
-    Stop local UI port-forwards when not needed.
-    Clean up resources when the lab/project is finished.
-    Keep Terraform state safe.
-    Do not commit secrets, tokens, private IP-specific notes, or personal local paths.
+    budget alerts enabled තබන්න
+    unnecessary public LoadBalancer services avoid කරන්න
+    internal services සඳහා ClusterIP use කරන්න
+    local UI port-forwards අවශ්‍ය නැති විට stop කරන්න
+    project finish කළාම resources cleanup කරන්න
+    Terraform state safe තබන්න
+    secrets, tokens, personal paths, live IP-specific notes commit කරන්න එපා
 
 ## Next documentation tasks
 
-Recommended next cleanup tasks:
+Next cleanup tasks:
 
-    Update root README.md
-    Update ROADMAP.md
-    Add final workflow run order
-    Add final cost and cleanup guide
-    Add architecture diagrams
-    Add final demo guide
+    root README.md update කිරීම
+    ROADMAP.md update කිරීම
+    workflow run order document කිරීම
+    cost and cleanup guide add කිරීම
+    architecture diagrams add කිරීම
+    final demo guide add කිරීම
