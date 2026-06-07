@@ -1,3 +1,35 @@
+## Architecture Overview
+
+This project builds a practical Azure AKS platform using Terraform, GitOps, monitoring, and operational runbooks.
+
+```mermaid
+flowchart LR
+    user["Engineer / Learner"]
+
+    repo["terraform-azure-aks<br/>Terraform + Platform Docs"]
+    azure["Azure<br/>Resource Groups, Network, ACR, Key Vault"]
+    aks["AKS Cluster<br/>System + Apps Node Pools"]
+    platform["Platform Add-ons<br/>Argo CD, Gateway API, Monitoring"]
+    gitops["GitOps Apps<br/>Dev, QA, Prod, AIOps"]
+    ops["Operations<br/>Grafana, Prometheus, Alertmanager, Cleanup"]
+
+    user --> repo
+    repo --> azure
+    azure --> aks
+    aks --> platform
+    platform --> gitops
+    platform --> ops
+```
+
+### What this repository provides
+
+- Terraform-based Azure AKS platform provisioning
+- AKS networking, node pools, identity, ACR, and Key Vault foundation
+- Argo CD and GitOps-ready platform setup
+- Monitoring and observability with Prometheus, Grafana, and Alertmanager
+- AIOps visibility and incident learning workflow
+- Cost control, cleanup, and learner-facing platform guides
+
 # AKS DevOps Practice Platform
 
 A reusable Azure AKS platform and learning project for practicing real-world DevOps, DevSecOps, GitOps, observability, platform engineering, and AIOps workflows.
