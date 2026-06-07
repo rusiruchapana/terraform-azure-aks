@@ -1,42 +1,68 @@
 # Terraform Azure AKS Learning Roadmap
 
-This roadmap defines the current learning flow, planned continuation, final projects, and the AI-assisted learning track for this project.
+This roadmap defines the learning flow for this AKS DevOps Practice Platform.
 
-The goal is to build a practical, step-by-step AKS learning path from beginner Kubernetes concepts to production-style platform delivery, DevSecOps, observability, final projects, and AI-assisted operations.
+The goal of this project is to build a practical path from Kubernetes and AKS fundamentals to production-style platform engineering, DevSecOps, GitOps, observability, incident response, AIOps visibility, and final capstone delivery.
 
 ## Guiding principles
 
-- Keep labs hands-on and beginner friendly.
-- Keep English and Sinhala guides aligned.
-- Use `README.md` as the English source of truth.
-- Keep `README.si.md` in the same heading order, same command flow, and same file path flow.
-- Do not include personal laptop paths in lab guides.
-- Do not assume a shared `~/projects` directory.
-- Use lab-specific workspaces where temporary app repositories are needed.
-- Separate learning-mode labs from production-mode recommendations.
+- Keep labs hands-on and practical.
 - Explain why each tool or pattern is used.
+- Keep beginner, practitioner, professional, and capstone learning levels clear.
+- Keep public documentation learner-facing.
+- Avoid personal laptop paths, private emails, secrets, tokens, and live environment-specific IP addresses.
+- Use variables and placeholders where environment-specific values are needed.
+- Separate learning-mode examples from production recommendations.
+- Prefer safe, low-cost defaults where possible.
+- Use GitOps for desired Kubernetes state where appropriate.
+- Use monitoring, alerts, and verification instead of assuming deployments are healthy.
 
-## Current practitioner flow
+## Learning tracks
+
+The project is organized into these learning tracks:
+
+1. Beginner AKS and Kubernetes basics
+2. Practitioner CI/CD, DevSecOps, secrets, monitoring, and telemetry
+3. Professional GitOps, release strategies, troubleshooting, and security hardening
+4. AIOps-assisted incident analysis and remediation concepts
+5. Enterprise AKS capstone project
+
+## Beginner track
+
+The beginner track focuses on understanding AKS and Kubernetes basics.
+
+Topics include:
+
+- AKS cluster access
+- kubectl basics
+- namespaces
+- pods
+- deployments
+- services
+- basic troubleshooting
+- safe cleanup
+
+## Practitioner track
 
 Practitioner labs focus on CI/CD tools, DevSecOps basics, secrets, monitoring, and application telemetry.
 
 Current practitioner sequence:
 
 1. GitHub Actions to AKS
-2. GitHub Actions DevSecOps Checks
+2. GitHub Actions DevSecOps checks
 3. GitLab CI/CD to AKS
-4. GitLab CI/CD DevSecOps Checks
+4. GitLab CI/CD DevSecOps checks
 5. Azure DevOps to AKS
-6. Azure DevOps DevSecOps Checks
+6. Azure DevOps DevSecOps checks
 7. Jenkins to AKS
-8. Jenkins DevSecOps Checks
+8. Jenkins DevSecOps checks
 9. Key Vault and Workload Identity
-10. Monitoring Basics
-11. OpenTelemetry App
+10. Monitoring basics
+11. OpenTelemetry application telemetry
 
-## Current professional flow
+## Professional track
 
-Professional labs focus on production delivery patterns, GitOps, environment promotion, deployment strategies, troubleshooting, and security hardening.
+Professional labs focus on production-style delivery patterns.
 
 Current professional sequence:
 
@@ -48,169 +74,239 @@ Current professional sequence:
 6. Incident troubleshooting
 7. Security hardening
 
-## Planned professional continuation
+## AIOps learning track
 
-After the current professional flow is complete, this project continues into stack-specific production deployment patterns and deeper DevSecOps quality gates.
+The AIOps learning track focuses on AI-assisted and monitoring-assisted operations.
 
-Planned continuation labs:
+Current focus areas:
 
-- Node.js production deployment
-- Python FastAPI production deployment
-- .NET production deployment
-- SonarQube or SonarCloud quality gates
-- Dependency scanning
-- Secrets scanning
-- Infrastructure-as-Code security scanning
-- Kubernetes policy validation
-- SBOM generation
-- Image signing
-- Full quality gate pipeline
+- incident evidence collection
+- root cause explanation
+- safe remediation recommendations
+- GitHub PR remediation
+- human approval before applying fixes
+- GitOps validation before recovery
+- Prometheus alert detection
+- Alertmanager visibility
+- AIOps dashboard visibility
 
-## Stack-specific professional labs
+The AIOps approach in this project does not replace engineering judgment. It supports evidence-based troubleshooting and safer remediation workflows.
 
-The goal of stack-specific labs is to show that the AKS delivery pattern is consistent, while each application stack has different build, test, and quality steps.
+## Enterprise AKS capstone project
 
-### Node.js
+The Enterprise AKS capstone is the main end-to-end project in this repository.
 
-Topics:
+Start here:
 
-- npm install or npm ci
-- Unit tests
-- Linting
-- Dependency scanning
-- Docker build
-- Image scanning
-- AKS deployment
+    capstone/README.md
 
-### Python FastAPI
+The capstone uses three repositories:
 
-Topics:
+    terraform-azure-aks
+    aks-capstone-store-app
+    aks-capstone-gitops
 
-- pip or requirements.txt
-- pytest
-- Linting
-- Dependency scanning
-- Docker build
-- Image scanning
-- AKS deployment
+## Capstone stage roadmap
 
-### .NET
+Completed capstone stages:
 
-Topics:
+| Stage | Area |
+|---|---|
+| 00 | Project overview |
+| 01 | Terraform platform provisioning |
+| 02 | Kubernetes access and verification |
+| 03 | Argo CD GitOps foundation |
+| 04 | Gateway API and NGINX Gateway Fabric |
+| 05 | Monitoring, alerting, and notifications |
+| 06 | OpenTelemetry observability |
+| 07 | Capstone Store Dev GitOps deployment |
+| 08 | Dev app expansion, capacity planning, cost guardrails, and Terraform import |
+| 09 | Dev app supporting components |
+| 10 | ACR image build and GitOps deploy |
+| 11 | GitHub Actions ACR build foundation |
+| 12 | CI updates GitOps and deploys Dev |
+| 13 | App DevSecOps CI gates |
+| 14 | GitOps manifest validation pipeline |
+| 15 | End-to-end Dev release verification |
+| 16 | Dev to QA to Prod promotion workflow |
+| 17 | Pipeline visibility and release flow |
+| 18 | Terraform platform CI and pipeline visibility |
+| 19 | AIOps PR remediation |
+| 20 | AIOps Incident Dashboard UI |
+| 21 | AIOps alert detection and dashboard visibility |
+| 22 | Load testing and observability verification |
 
-- dotnet restore
-- dotnet build
-- dotnet test
-- Package vulnerability checks
-- Docker multi-stage build
-- Image scanning
-- AKS deployment
+## Capstone capabilities
 
-## Final projects
+The capstone currently demonstrates:
 
-Final projects will be created after the current practitioner, professional, and stack-specific continuation paths are complete.
+- Terraform-based AKS platform provisioning
+- remote Terraform state backend
+- Azure Container Registry integration
+- AKS node pool management
+- Argo CD GitOps
+- Gateway API and NGINX Gateway Fabric
+- Prometheus, Grafana, and Alertmanager
+- OpenTelemetry observability foundation
+- Dev, QA, and Prod GitOps environments
+- GitHub Actions CI/CD
+- Gitleaks secret scanning
+- Trivy source and image scanning
+- GitOps manifest validation with Kustomize and kubeconform
+- Dev release verification
+- Dev to QA to Prod image promotion
+- Terraform platform CI with TFLint and Checkov
+- AIOps PR remediation workflow
+- Prometheus-based AIOps alert detection
+- AIOps Dashboard active incident visibility
+- Docker-based k6 load testing
+- Grafana and Prometheus observability verification
 
-The final projects should be full end-to-end secure AKS delivery projects with best practices, security hardening, CI/CD, DevSecOps, observability, and operational documentation.
+## Platform architecture principles
 
-Planned final projects:
+The project follows these architecture principles:
 
-1. Final Project A - Secure end-to-end Node.js AKS delivery
-2. Final Project B - Secure end-to-end Python AKS delivery
-3. Final Project C - Secure end-to-end .NET AKS delivery
-4. Optional Final Project D - Multi-language microservices capstone
+- Terraform manages platform infrastructure.
+- Application CI builds and scans container images.
+- GitOps manages Kubernetes desired state.
+- Argo CD applies environment manifests.
+- DevSecOps gates run before deployment or promotion.
+- Monitoring verifies runtime health.
+- Alerts detect operational issues.
+- AIOps workflows use evidence and human-approved PR remediation.
+- Load testing verifies application and platform behavior under traffic.
 
-## Final project architecture principles
+## Repository separation
 
-Final projects should teach production-style separation of concerns:
+The capstone uses repository separation to model real-world responsibilities.
 
-- Terraform builds and maintains platform infrastructure.
-- Application CI/CD builds, scans, and deploys application releases.
-- GitOps may be used to manage desired Kubernetes state.
-- Progressive delivery can be used for safer releases.
+Platform repository:
 
-Recommended separation:
+    terraform-azure-aks
 
-```text
-platform-infra-repo
-  Terraform
-  remote state
-  plan/apply pipeline
-  approvals
+Purpose:
 
-application-repo
-  application code
-  Dockerfiles
-  tests
-  scans
-  Helm or Kubernetes manifests
-  app CI/CD pipeline
+    platform infrastructure
+    Terraform modules and root configurations
+    platform CI
+    capstone documentation
+    local UI helper scripts
 
-gitops-config-repo
-  optional desired state repository
-  environment overlays
-  Argo CD or Flux sync
-Deployment strategies for final projects
+Application repository:
 
-Final projects should include or explain:
+    aks-capstone-store-app
 
-Rolling deployment
-Blue/green deployment
-Canary deployment
-Rollback strategy
-Environment promotion
-Manual approvals for protected environments
-AI track
+Purpose:
 
-The AI track is tracked separately and will be added after the core platform, practitioner, professional, and final project paths are established.
+    application source code
+    application CI
+    image build and scan
+    ACR push
+    Dev GitOps update
+    Dev release verification
 
-The purpose of the AI track is to show how AI can assist DevOps and platform engineering workflows without replacing engineering judgment.
+GitOps repository:
 
-Planned AI labs:
+    aks-capstone-gitops
 
-AI-assisted DevOps documentation
-AI-assisted Terraform review
-AI-assisted Kubernetes troubleshooting
-AI-assisted CI/CD failure analysis
-AI-assisted security finding explanation
-RAG chatbot for platform documentation
-AI incident assistant using logs and alerts
-AI guardrails, privacy, and safe usage
-DevSecOps maturity path
+Purpose:
 
-The project will evolve DevSecOps coverage in stages.
+    Kubernetes manifests
+    Kustomize overlays
+    Argo CD applications
+    Dev, QA, and Prod desired state
+    GitOps validation
+    promotion workflow
+    AIOps monitoring and dashboard manifests
 
-Practitioner level
-Basic Trivy config scanning
-Basic Trivy image scanning
-Scan-only pipelines
-Learning mode with non-failing scans
-Professional level
-Code quality checks
-Dependency scanning
-Secrets scanning
-IaC scanning
-Kubernetes policy checks
-SBOM generation
-Image signing
-Strict quality gates
-Documented exception process
-Final project level
-Full integrated quality gate pipeline
-Environment-specific controls
-Security hardening
-Observability
-Operational runbooks
-Production-style approval flow
-Documentation quality rules
+## DevSecOps maturity path
 
-All lab guides must follow these rules:
+The DevSecOps path evolves in stages.
 
-README.md is the English source of truth.
-README.si.md follows the same headings.
-README.si.md follows the same command blocks.
-README.si.md follows the same cleanup flow.
-No personal laptop paths are allowed.
-No shared ~/projects assumption is allowed.
-Use lab-specific workspace variables when temporary repositories are needed.
-Deployment labs must explain required variables or link to the shared variables guide.
-Scan-only DevSecOps labs must clearly state that deployment credentials are not required.
+Practitioner level:
+
+- basic source scanning
+- basic image scanning
+- learning-mode scan results
+- simple pipeline quality checks
+
+Professional level:
+
+- strict CI gates
+- secrets scanning
+- dependency scanning
+- container image scanning
+- GitOps validation
+- Kubernetes manifest validation
+- IaC scanning
+- documented exception handling
+
+Capstone level:
+
+- integrated app CI quality gates
+- GitOps validation pipeline
+- Terraform platform CI
+- promotion workflow
+- end-to-end release verification
+- observability verification
+- incident visibility and remediation workflow
+
+## Observability maturity path
+
+The observability path evolves in stages.
+
+Foundation:
+
+- Prometheus installed
+- Grafana installed
+- Alertmanager installed
+- kube-state-metrics installed
+- node-exporter installed
+
+Platform verification:
+
+- dashboards accessible
+- Prometheus metrics queryable
+- Alertmanager alerts visible
+- Kubernetes pod, deployment, node, and network metrics visible
+
+Operational verification:
+
+- AIOps alert detection
+- AIOps Dashboard active incident visibility
+- load testing with k6
+- Grafana metrics during load
+- Prometheus query verification after load
+- Kubernetes health check after load
+
+## Recommended future improvements
+
+Future improvements may include:
+
+- DNS and HTTPS/TLS for the Gateway
+- production-style certificate management
+- stronger environment protection rules
+- notification integration for alerts
+- improved application-level HTTP metrics
+- gateway-level request and latency dashboards
+- authenticated UI access
+- architecture diagrams
+- final public demo guide
+- cost and cleanup guide
+- public release readiness checklist
+
+## Documentation quality rules
+
+Public documentation should follow these rules:
+
+- Use learner-facing language.
+- Avoid private discussion notes.
+- Avoid personal local paths.
+- Avoid private emails.
+- Avoid live environment-specific IP addresses.
+- Avoid secrets or tokens.
+- Use placeholders and variables for environment-specific values.
+- Keep commands copy/paste friendly.
+- Explain what each stage proves.
+- Include verification steps.
+- Include cleanup steps where needed.
