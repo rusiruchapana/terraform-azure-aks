@@ -4,9 +4,25 @@ name: Terraform Platform CI
   pull_request:
     branches:
       - main
+    paths:
+      - "**/*.tf"
+      - "**/*.tfvars"
+      - ".terraform.lock.hcl"
+      - ".github/workflows/terraform-platform-ci.yml"
+      - ".tflint.hcl"
+      - ".checkov.yml"
+
   push:
     branches:
       - main
+    paths:
+      - "**/*.tf"
+      - "**/*.tfvars"
+      - ".terraform.lock.hcl"
+      - ".github/workflows/terraform-platform-ci.yml"
+      - ".tflint.hcl"
+      - ".checkov.yml"
+
   workflow_dispatch:
 
 permissions:
