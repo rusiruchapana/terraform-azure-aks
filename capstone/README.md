@@ -227,6 +227,7 @@ Local UI helper scripts:
 | 20 | [AIOps Incident Dashboard UI](20-aiops-incident-dashboard-ui/README.si.md) |
 | 21 | [AIOps Alert Detection and Dashboard Visibility](21-aiops-alert-detection-and-dashboard-visibility/README.si.md) |
 | 22 | [Load Testing and Observability Verification](22-load-testing-and-observability-verification/README.si.md) |
+| 23 | [Final Demo and Run Order](23-final-demo-and-run-order/README.si.md) |
 
 ## Main workflows
 
