@@ -1,461 +1,409 @@
 # Stage 17 - Pipeline Visibility and Release Flow Documentation
 
-## මේ stage එකේදී මොකක්ද කරන්නේ?
+## මේ stage එකේදී කරන්නේ මොකක්ද?
 
-මේ stage එකේදී අපි project එකේ complete pipeline flow එක learnerට clear වෙන විදිහට document කරනවා.
+මේ stage එකේදී අපි capstone project එකේ pipeline flow එක learner කෙනෙක්ට ලේසියෙන් තේරෙන විදිහට පැහැදිලි කරනවා.
 
-Stage 11 සිට Stage 16 දක්වා අපි pipelines කිහිපයක් හදාගත්තා.
+Stage 11 සිට Stage 16 දක්වා අපි pipelines කිහිපයක් හදාගෙන තියෙනවා. ඒ pipelines එකම repository එකක නෙවෙයි තියෙන්නේ. සමහර pipelines app repo එකේ තියෙනවා. සමහර pipelines GitOps repo එකේ තියෙනවා. Argo CD sync එක GitHub Actions pipeline එකක් නෙවෙයි; ඒක AKS cluster එක ඇතුළේ run වෙන continuous delivery controller එකක්.
 
-ඒ pipelines එක repo එකක විතරක් නැහැ.
+මේ නිසා learner කෙනෙක්ට මේ වගේ ප්‍රශ්න එන්න පුළුවන්:
 
-Pipelines තියෙන්නේ repos දෙකක:
+    මුලින්ම run කරන්න ඕන pipeline එක මොකක්ද?
+    ඊළඟට automatically run වෙන pipeline එක මොකක්ද?
+    App repo pipeline එක සහ GitOps repo pipeline එක වෙනස් ඇයි?
+    Dev release එක verify කරන්නේ කොහොමද?
+    QA වලට promote කරන්නේ කොහොමද?
+    Prod වලට promote කරන්නේ කොහොමද?
+    GitHub Actions UI එකේ මම බලන්න ඕන workflow එක මොකක්ද?
 
-    aks-capstone-store-app
-    aks-capstone-gitops
+මේ guide එකෙන් ඒ flow එක සරලව පැහැදිලි කරනවා.
 
-ඒ නිසා learner කෙනෙක්ට මෙවැනි ප්‍රශ්න එන්න පුළුවන්:
+## මේ documentation stage එක වැදගත් ඇයි?
 
-    මුලින් run වෙන්නේ මොන pipeline එකද?
-    ඊළඟට auto run වෙන්නේ මොකක්ද?
-    GitOps pipeline එක app pipeline එකෙන් වෙනස් ඇයි?
-    QA/Prod promote කරන්න බලන්න ඕන pipeline එක මොකක්ද?
-    Release එක ඇත්තටම success ද කියලා final check කරන්නේ කොහොමද?
+Pipeline එක වැඩ කරනවා කියන එක පමණක් ප්‍රමාණවත් නෑ. Userට pipeline flow එක තේරෙන්න ඕන.
 
-මෙම stage එකේදී ඒ confusion එක remove කරනවා.
+හොඳ platform engineering project එකක මේ දේවල් clear වෙන්න ඕන:
 
-## මේ stage එක වැදගත් ඇයි?
+    automation එක වැඩ කරනවාද
+    pipeline responsibility එක මොකක්ද
+    release එක environment අතර යන්නේ කොහොමද
+    user බලන්න ඕන workflow එක මොකක්ද
+    final verification කරන්නේ කොහොමද
 
-Project එක technically වැඩ කරනවා කියලා විතරක් ප්‍රමාණවත් නැහැ.
+Stage 17 එකෙන් අපි අලුත් AKS resource එකක් add කරන්නේ නෑ. අලුත් application service එකක් add කරන්නේ නෑ. මේ stage එක documentation සහ learner visibility improve කරන stage එකක්.
 
-Learnerට සහ GitHub repo බලන employer කෙනෙක්ට flow එක තේරෙන්න ඕන.
+## Stage 17 පටන් ගන්න කලින් තිබුණු stable තත්ත්වය
 
-Good project එකක් වන්නේ:
+Stage 17 ලියන්නේ Stage 16 complete වුණාට පස්සේ.
 
-    pipelines run වෙනවා
-    logs pass වෙනවා
-    architecture clear
-    responsibilities clear
-    documentation clear
+ඒ වෙලාවේ තත්ත්වය:
 
-මෙම Stage 17 එක pipeline implementation stage එකක් නෙවෙයි.
+    Dev release pipeline වැඩ කරනවා
+    GitOps manifest validation pipeline වැඩ කරනවා
+    Dev release end-to-end verification pipeline වැඩ කරනවා
+    QA promotion workflow වැඩ කරනවා
+    Prod promotion workflow වැඩ කරනවා
+    Dev, QA, Prod Argo CD apps Synced / Healthy
+    QA සහ Prod store-front services ClusterIP
+    MongoDB probe/resource tuning fix එක apply වෙලා stable
 
-මෙය pipeline visibility සහ learning experience improve කරන stage එකක්.
+ඒ නිසා දැන් full pipeline flow එක document කරන එක safe. Stage 16ට කලින් මේ guide එක ලිව්වා නම් QA/Prod promotion flow තව complete නැති නිසා guide එක outdated වෙන්න තිබුණා.
 
-## Current stable pipeline state
+## Repositories තුනේ role එක
 
-Stage 17 පටන් ගන්න කලින් stable state එක:
+මෙම capstone project එකට repositories තුනක් සම්බන්ධයි.
 
-    Dev release pipeline works
-    GitOps validation pipeline works
-    Dev end-to-end verification pipeline works
-    QA/Prod promotion workflow works
-    Dev/QA/Prod all Synced and Healthy
-    QA/Prod services are ClusterIP
-    MongoDB stability issue fixed
+### aks-capstone-store-app
 
-ඒ නිසා දැන් full pipeline flow document කරන්න safe.
+මෙය application source repository එක.
 
-Stage 16 ඉවර වෙන්න කලින් final pipeline doc එක ලිව්වා නම් ඒක outdated වෙන්න තිබුණා.
+මෙහි තියෙන්නේ:
 
-දැන් Dev -> QA -> Prod flow complete නිසා final pipeline flow meaningful.
-
-## Repositories overview
-
-මෙම capstone project එකේ pipeline responsibilities repos කිහිපයකට බෙදා ඇත.
-
-### App repo
-
-Repo:
-
-    aks-capstone-store-app
-
-මෙම repo එකේ තියෙන්නේ:
-
-    application source code
+    store-front source code
     Dockerfile
-    app build workflow
-    Dev deployment trigger workflow
+    image build workflow
+    Dev GitOps update workflow
     Dev release verification workflow
 
-App repo pipelines mainly answer කරන්නේ:
+මෙම repo එකේ workflows වලින් mainly බලන්නේ:
 
-    image build වෙනවද?
-    app source scan pass ද?
-    image scan pass ද?
-    image ACR එකට push වුණාද?
-    Dev GitOps image tag update වුණාද?
-    Dev release end-to-end healthy ද?
+    app code scan pass ද
+    Docker image build වෙනවද
+    image ACR එකට push වෙනවද
+    Dev GitOps image tag update වෙනවද
+    Dev release end-to-end verify වෙනවද
 
-### GitOps repo
+### aks-capstone-gitops
 
-Repo:
+මෙය GitOps desired state repository එක.
 
-    aks-capstone-gitops
-
-මෙම repo එකේ තියෙන්නේ:
+මෙහි තියෙන්නේ:
 
     Kubernetes manifests
     Kustomize base
-    Dev/QA/Prod overlays
-    Argo CD Applications
+    Dev overlay
+    QA overlay
+    Prod overlay
+    Argo CD Application manifests
     GitOps validation workflow
     QA/Prod promotion workflow
 
-GitOps repo pipelines mainly answer කරන්නේ:
+මෙම repo එකේ workflows වලින් mainly බලන්නේ:
 
-    Kubernetes manifests valid ද?
-    Kustomize render වෙනවද?
-    kubeconform validation pass ද?
-    QA/Prod overlay image tag update කළාද?
-    promotion commit push වුණාද?
+    YAML valid ද
+    Kustomize render වෙනවද
+    Kubernetes schema validation pass ද
+    QA/Prod overlay image tag update වෙනවද
+    promotion commit push වෙනවද
 
-### Terraform/platform repo
+### terraform-azure-aks
 
-Repo:
+මෙය platform සහ documentation repository එක.
 
-    terraform-azure-aks
-
-මෙම repo එකේ තියෙන්නේ:
+මෙහි තියෙන්නේ:
 
     Terraform platform code
     AKS platform setup
-    learning guides
-    capstone stage documentation
+    capstone guides
+    learning documentation
 
-මෙම repo එකේ මෙම guide එක තියෙනවා.
+මෙම Stage 17 guide එක තියෙන්නේ මේ repository එකේ.
 
-## Why pipelines are split across repos
+## Pipelines repos දෙකක තියෙන්නේ ඇයි?
 
-Pipelines repos දෙකක තියෙන්නේ project එක confuse කරන්න නෙවෙයි.
+මෙය වැරදි design එකක් නෙවෙයි. මේක production-style separation එකක්.
 
-ඒක production-style separation එකක්.
+App repo එකේ responsibility එක:
 
-App repo concern එක:
-
-    app code
+    application code
     image build
     image scan
     image publish
+    Dev image tag update
 
-GitOps repo concern එක:
+GitOps repo එකේ responsibility එක:
 
     Kubernetes desired state
     environment overlays
     manifest validation
-    promotion
+    QA/Prod promotion
 
-Argo CD concern එක:
+Argo CD responsibility එක:
 
-    GitOps desired state cluster එකට sync කිරීම
+    GitOps repo එකේ desired state එක AKS cluster එකට sync කිරීම
 
-මෙම separation එකෙන් ownership clear වෙනවා.
+සරලව කිව්වොත්:
 
-App developer app repo එකේ වැඩ කරනවා.
+    App repo pipeline එක artifact එක හදනවා.
+    GitOps repo pipeline එක deployment manifests validate කරනවා.
+    Argo CD ඒ desired state එක cluster එකට apply කරනවා.
+    Verification pipeline එක release එක ඇත්තටම වැඩ කරනවද බලනවා.
+    Promotion workflow එක same image එක QA/Prod වලට promote කරනවා.
 
-Platform/GitOps owner GitOps repo එකේ deployment desired state manage කරනවා.
+## Full release flow එක
 
-## Main release flow
+Full flow එක මෙහෙමයි:
 
-Full release flow එක මෙහෙමයි:
+    1. User app repo එකේ Dev build/deploy workflow එක run කරනවා
+    2. App pipeline image build කරලා scan කරලා ACR එකට push කරනවා
+    3. App pipeline GitOps repo එකේ Dev image tag update කරනවා
+    4. GitOps repo එකට commit push වුණාම GitOps validation workflow auto run වෙනවා
+    5. Argo CD GitOps change එක detect කරලා Dev environment sync කරනවා
+    6. User Dev release verification workflow එක run කරනවා
+    7. Dev verified නම් same image tag එක QA වලට promote කරනවා
+    8. QA promotion commit එකෙන් GitOps validation auto run වෙනවා
+    9. Argo CD QA environment sync කරනවා
+    10. QA okay නම් same image tag එක Prod වලට promote කරනවා
+    11. Prod promotion commit එකෙන් GitOps validation auto run වෙනවා
+    12. Argo CD Prod environment sync කරනවා
 
-    App repo pipeline
-        -> build and scan image
-        -> push image to ACR
-        -> update GitOps Dev overlay
+## Pipeline flow diagram එක
 
-    GitOps validation pipeline
-        -> validate YAML
-        -> render Kustomize
-        -> validate Kubernetes schemas
+සරල text diagram එක:
 
-    Argo CD
-        -> sync Dev environment
+    Developer / Learner
+          |
+          v
+    aks-capstone-store-app
+    Build store-front and deploy Dev via GitOps
+          |
+          v
+    ACR image push
+          |
+          v
+    aks-capstone-gitops
+    Dev overlay image tag update
+          |
+          v
+    Validate GitOps manifests
+          |
+          v
+    Argo CD syncs Dev
+          |
+          v
+    aks-capstone-store-app
+    Verify Dev release end-to-end
+          |
+          v
+    aks-capstone-gitops
+    Promote same image to QA
+          |
+          v
+    Validate GitOps manifests
+          |
+          v
+    Argo CD syncs QA
+          |
+          v
+    aks-capstone-gitops
+    Promote same image to Prod
+          |
+          v
+    Validate GitOps manifests
+          |
+          v
+    Argo CD syncs Prod
 
-    Dev verification pipeline
-        -> verify ACR
-        -> verify GitOps
-        -> verify Argo CD
-        -> verify AKS
-        -> verify Gateway
+## Pipeline 1 - Dev image build සහ GitOps update
 
-    Promotion workflow
-        -> promote same image tag to QA or Prod
+මෙම pipeline එක app repo එකේ තියෙනවා.
 
-    GitOps validation pipeline
-        -> validate promoted GitOps change
-
-    Argo CD
-        -> sync QA or Prod
-
-## Pipeline map
-
-Full pipeline map:
-
-    1. Build store-front and deploy Dev via GitOps
-    2. Validate GitOps manifests
-    3. Argo CD Dev sync
-    4. Verify Dev release end-to-end
-    5. Promote store-front image
-    6. Validate GitOps manifests again
-    7. Argo CD QA/Prod sync
-
-## Pipeline 1 - App build and Dev GitOps update
-
-Repo:
+Repository:
 
     aks-capstone-store-app
 
-Workflow:
+Workflow name:
 
     Build store-front and deploy Dev via GitOps
 
-Trigger:
+Run කරන ආකාරය:
 
     Manual workflow_dispatch
 
-Main input:
+User දෙන input එක:
 
     image_tag
 
-Example:
+උදාහරණයක්:
 
     stage13-v1
 
-Purpose:
+මෙම pipeline එක කරන්නේ:
 
-    Build store-front image
-    Run DevSecOps scans
-    Push image to ACR
-    Update GitOps Dev image tag
+    store-front source code checkout කරනවා
+    Gitleaks secret scan run කරනවා
+    Trivy source/dependency scan run කරනවා
+    Azure login with OIDC කරනවා
+    ACR login කරනවා
+    Docker image build කරනවා
+    Trivy image scan run කරනවා
+    image එක ACR එකට push කරනවා
+    pushed image tag එක ACR එකේ තියෙනවද verify කරනවා
+    GitOps repo checkout කරනවා
+    Dev overlay image tag update කරනවා
+    GitOps repo එකට commit/push කරනවා
 
-This is the first pipeline user normally runs for a new app release.
+මෙම pipeline එක AKS cluster එකට direct deploy කරන්නේ නෑ.
 
-## Pipeline 1 steps
+ඒ වෙනුවට එය GitOps repo එක update කරනවා. Argo CD පස්සේ GitOps change එක detect කරලා deploy කරනවා.
 
-This workflow includes steps like:
+## Pipeline 1 එකෙන් ලැබෙන result එක
 
-    Secret scan with Gitleaks
-    Source/dependency scan with Trivy
-    Azure login with OIDC
-    ACR login
-    Docker Buildx setup
-    Build and push image
-    Image scan with Trivy
-    Verify image tag in ACR
-    Checkout GitOps repo
-    Update Dev image tag
-    Commit and push GitOps change
+මෙම pipeline එක success වුණාම මේවා complete වෙලා තියෙන්න ඕන:
 
-This pipeline ends after GitOps repo update is pushed.
+    image ACR එකේ තියෙනවා
+    GitOps Dev overlay image tag update වෙලා තියෙනවා
+    GitOps repo එකට commit push වෙලා තියෙනවා
+    GitHub Actions workflow success
 
-It does not directly deploy to AKS.
-
-Argo CD deploys after GitOps update.
-
-## Pipeline 1 output
-
-Expected result:
-
-    image pushed to ACR
-    GitOps repo Dev overlay updated
-    GitOps commit created
-    workflow success
-
-Example image:
+උදාහරණ image format එක:
 
     <acr-login-server>/store-front:<image-tag>
 
 ## Pipeline 2 - GitOps manifest validation
 
-Repo:
+මෙම pipeline එක GitOps repo එකේ තියෙනවා.
+
+Repository:
 
     aks-capstone-gitops
 
-Workflow:
+Workflow name:
 
     Validate GitOps manifests
 
-Trigger:
+Run වෙන ආකාරය:
 
-    Automatic on push to main
-    Automatic on pull request to main
-    Manual workflow_dispatch
+    GitOps repo main branch එකට push වුණාම automatic run වෙනවා
+    main branch එකට pull request එකක් ආවොත් run වෙනවා
+    අවශ්‍ය නම් manually run කරන්නත් පුළුවන්
 
-Purpose:
+මෙම pipeline එක කරන්නේ:
 
-    Validate GitOps repo changes before Argo CD relies on them
+    YAML syntax check කරනවා
+    Kustomize render වෙනවද බලනවා
+    rendered Kubernetes manifests kubeconform වලින් validate කරනවා
 
-This workflow auto-runs after Pipeline 1 updates GitOps repo.
+මෙය app pipeline එක Dev GitOps update කළාට පස්සේ automatically run වෙනවා.
 
-It also auto-runs after QA/Prod promotion workflow updates GitOps repo.
+මෙය QA/Prod promotion workflow එක GitOps repo එකට commit push කළාට පස්සේත් automatically run වෙනවා.
 
-## Pipeline 2 steps
+## Pipeline 2 එකෙන් ලැබෙන result එක
 
-This workflow checks:
+මෙම pipeline එක success වුණාම මේවා confirm වෙනවා:
 
-    YAML syntax with PyYAML
-    Kustomize render
-    Kubernetes schema validation with kubeconform
+    YAML files valid
+    Kustomize render pass
+    Kubernetes schema validation pass
+    GitOps desired state invalid නැහැ
 
-Validation flow:
-
-    Checkout GitOps repo
-        -> Install PyYAML
-        -> Install kubeconform
-        -> Validate YAML syntax
-        -> Render Kustomize base
-        -> Validate rendered manifests
-
-## Pipeline 2 output
-
-Expected result:
-
-    YAML valid
-    Kustomize render valid
-    kubeconform valid
-    workflow success
-
-If this workflow fails, GitOps change is risky.
-
-Do not assume release is safe until this validation passes.
+මෙම pipeline එක fail වුණොත් GitOps change එක safe කියලා assume කරන්න එපා.
 
 ## Argo CD Dev sync
 
-Repo:
+Argo CD කියන්නේ GitHub Actions workflow එකක් නෙවෙයි.
 
-    not a GitHub repo workflow
+එය AKS cluster එක ඇතුළේ run වෙන continuous delivery controller එකක්.
 
-System:
-
-    Argo CD running inside AKS
-
-Application:
+Dev Argo CD Application එක:
 
     capstone-store-dev
 
-Trigger:
+එය watch කරන GitOps path එක:
 
-    automatic sync after GitOps desired state changes
-
-Purpose:
-
-    Deploy GitOps desired state into capstone-dev namespace
-
-Argo CD watches:
-
-    aks-capstone-gitops
     apps/capstone-store/overlays/dev
 
-When Dev overlay changes, Argo CD syncs Dev.
+GitOps Dev overlay වෙනස් වුණාම Argo CD ඒ change එක detect කරලා capstone-dev namespace එකට sync කරනවා.
 
-## Argo CD Dev verification
-
-Check:
+Check command:
 
     kubectl get application capstone-store-dev -n argocd
 
-Expected:
+Expected status:
 
     Synced / Healthy
 
-This means Argo CD sees GitOps desired state and cluster actual state as aligned and healthy.
-
 ## Pipeline 3 - Dev release end-to-end verification
 
-Repo:
+මෙම pipeline එක app repo එකේ තියෙනවා.
+
+Repository:
 
     aks-capstone-store-app
 
-Workflow:
+Workflow name:
 
     Verify Dev release end-to-end
 
-Trigger:
+Run කරන ආකාරය:
 
     Manual workflow_dispatch
 
-Main input:
+User දෙන input එක:
 
     image_tag
 
-Purpose:
+මෙම pipeline එක deploy කරන්නේ නෑ. එය release එක verify කරනවා.
 
-    Verify Dev release from image to user access
+එය check කරන දේවල්:
 
-This pipeline does not deploy.
+    ACR image tag exists ද
+    GitOps repo image tag match ද
+    latest GitOps validation workflow passed ද
+    AKS credentials ගන්න පුළුවන්ද
+    Argo CD app Synced / Healthy ද
+    AKS deployment expected image එක use කරනවද
+    rollout complete ද
+    pod Running ද
+    Gateway HTTP 200 return කරනවද
 
-It verifies the release.
+## Pipeline 3 එකෙන් ලැබෙන result එක
 
-## Pipeline 3 checks
+මෙම pipeline එක success නම් Dev release එක end-to-end healthy කියලා කියන්න පුළුවන්.
 
-The Dev verification workflow checks:
+මෙම pipeline එක app repo සහ GitOps repo අතර confusion අඩු කරනවා, මොකද එක workflow එකෙන් ACR -> GitOps -> Argo CD -> AKS -> Gateway flow එක verify කරනවා.
 
-    ACR image tag exists
-    GitOps repo image tag matches
-    latest GitOps validation workflow passed
-    AKS credentials available
-    Argo CD app Synced and Healthy
-    AKS deployment uses expected image
-    rollout completed
-    pod Running
-    Gateway returns HTTP 200
+## Pipeline 4 - QA/Prod promotion
 
-This is the best single pipeline to prove Dev release success.
+මෙම pipeline එක GitOps repo එකේ තියෙනවා.
 
-## Pipeline 3 output
-
-Expected result:
-
-    ACR verified
-    GitOps verified
-    Argo CD verified
-    AKS verified
-    Gateway verified
-    workflow success
-
-If this passes, Dev release is end-to-end healthy.
-
-## Pipeline 4 - Promote store-front image
-
-Repo:
+Repository:
 
     aks-capstone-gitops
 
-Workflow:
+Workflow name:
 
     Promote store-front image
 
-Trigger:
+Run කරන ආකාරය:
 
     Manual workflow_dispatch
 
-Inputs:
+User දෙන inputs:
 
     target_environment
     image_tag
 
-target_environment options:
+target_environment values:
 
     qa
     prod
 
-Purpose:
+මෙම pipeline එක image rebuild කරන්නේ නෑ.
 
-    Promote same image tag to QA or Prod by updating GitOps overlay
+එය කරන්නේ target environment overlay එකේ image tag update කිරීමයි.
 
-This workflow does not rebuild the image.
-
-It updates:
+QA promotion එක update කරන file එක:
 
     apps/capstone-store/overlays/qa/kustomization.yaml
 
-or:
+Prod promotion එක update කරන file එක:
 
     apps/capstone-store/overlays/prod/kustomization.yaml
 
 ## Pipeline 4 steps
 
-Promotion workflow steps:
+Promotion workflow එකේ numbered steps තියෙනවා.
 
     [01] Checkout GitOps repo
     [02] Validate promotion input
@@ -464,73 +412,84 @@ Promotion workflow steps:
     [05] Commit and push promotion change
     [06] Promotion summary
 
-Numbered steps help learner understand the current pipeline phase.
+Numbered steps use කළේ GitHub Actions UI එකේ learnerට current phase එක ලේසියෙන් තේරෙන්න.
 
-## Pipeline 4 output
+## Pipeline 4 එකෙන් ලැබෙන result එක
 
-Expected result:
+මෙම pipeline එක success වුණාම:
 
-    target overlay image tag updated
-    Kustomize render passes
-    GitOps commit pushed
-    workflow success
+    target overlay image tag update වෙනවා
+    Kustomize render pass වෙනවා
+    GitOps repo එකට promotion commit එක push වෙනවා
+    GitOps validation workflow auto run වෙනවා
+    Argo CD target environment sync කරනවා
 
-After this workflow pushes a GitOps commit, Pipeline 2 runs automatically again.
+If target environment එක already requested image tag එක use කරනවා නම් workflow එකට commit කරන්න දෙයක් නැති වෙන්න පුළුවන්.
 
-## Pipeline 5 - GitOps validation after promotion
+එවිට output එකේ මෙහෙම පෙන්වන්න පුළුවන්:
 
-Repo:
+    No promotion change to commit
 
-    aks-capstone-gitops
+ඒක failure එකක් නෙවෙයි. ඒකෙන් කියන්නේ environment එක already requested image tag එකේ තියෙනවා කියලා.
+
+## QA promotion flow එක
+
+Dev release verify වුණාට පස්සේ QA promotion කරන්න.
 
 Workflow:
 
-    Validate GitOps manifests
+    Promote store-front image
 
-Trigger:
+Inputs:
 
-    Automatic on promotion commit push
+    target_environment: qa
+    image_tag: Dev වල verify කළ same image tag එක
 
-Purpose:
+QA promotion එකෙන් පස්සේ:
 
-    Validate QA/Prod promotion GitOps change
+    GitOps validation auto run වෙනවා
+    Argo CD capstone-store-qa sync කරනවා
 
-This is the same GitOps validation workflow used earlier.
-
-It runs again because promotion workflow commits to GitOps repo.
-
-## Pipeline 6 - Argo CD QA/Prod sync
-
-System:
-
-    Argo CD running inside AKS
-
-Applications:
-
-    capstone-store-qa
-    capstone-store-prod
-
-Trigger:
-
-    automatic sync after GitOps overlay changes
-
-QA app watches:
-
-    apps/capstone-store/overlays/qa
-
-Prod app watches:
-
-    apps/capstone-store/overlays/prod
-
-After promotion, Argo CD syncs the target environment.
-
-## QA/Prod verification
-
-QA check:
+QA verify කරන්න:
 
     kubectl get application capstone-store-qa -n argocd
 
-Prod check:
+Expected:
+
+    Synced / Healthy
+
+QA image verify කරන්න:
+
+    kubectl get deployment store-front -n capstone-qa \
+      -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+
+QA service verify කරන්න:
+
+    kubectl get svc store-front -n capstone-qa
+
+Expected service type:
+
+    ClusterIP
+
+## Prod promotion flow එක
+
+QA verify වුණාට පස්සේ Prod promotion කරන්න.
+
+Workflow:
+
+    Promote store-front image
+
+Inputs:
+
+    target_environment: prod
+    image_tag: QA වල verify කළ same image tag එක
+
+Prod promotion එකෙන් පස්සේ:
+
+    GitOps validation auto run වෙනවා
+    Argo CD capstone-store-prod sync කරනවා
+
+Prod verify කරන්න:
 
     kubectl get application capstone-store-prod -n argocd
 
@@ -538,285 +497,164 @@ Expected:
 
     Synced / Healthy
 
-Image check:
-
-    kubectl get deployment store-front -n capstone-qa \
-      -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+Prod image verify කරන්න:
 
     kubectl get deployment store-front -n capstone-prod \
       -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 
-Expected image:
+Prod service verify කරන්න:
 
-    <acr-login-server>/store-front:<image-tag>
-
-Service check:
-
-    kubectl get svc store-front -n capstone-qa
     kubectl get svc store-front -n capstone-prod
 
 Expected service type:
 
     ClusterIP
 
-## Which pipeline should user run first?
+## User මුලින්ම බලන්න ඕන workflow එක
 
-For a new Dev release, user runs first:
-
-    aks-capstone-store-app
-      -> Build store-front and deploy Dev via GitOps
-
-This builds and publishes the image and updates Dev GitOps.
-
-## What runs automatically after the first pipeline?
-
-After app pipeline updates GitOps repo:
-
-    aks-capstone-gitops
-      -> Validate GitOps manifests
-
-runs automatically because GitOps repo receives a push.
-
-Then Argo CD automatically syncs Dev.
-
-## What should user run after Dev sync?
-
-User should run:
+New release එකක් test කරන්න user මුලින් run කරන්න ඕන workflow එක:
 
     aks-capstone-store-app
-      -> Verify Dev release end-to-end
+      Build store-front and deploy Dev via GitOps
 
-This proves the Dev release is actually working.
+මෙම workflow එක app build කරලා image publish කරලා Dev GitOps update කරනවා.
 
-## How to promote to QA?
+## පළවෙනි pipeline එකෙන් පස්සේ automatically run වෙන දේ
 
-After Dev is verified, user runs:
+App pipeline එක GitOps repo එකට commit push කළාම automatically run වෙන්නේ:
 
     aks-capstone-gitops
-      -> Promote store-front image
+      Validate GitOps manifests
+
+ඊට පස්සේ Argo CD Dev app එක sync කරනවා.
+
+## Dev verify කරන්න user run කරන්න ඕන workflow එක
+
+Dev app sync වුණාට පස්සේ user run කරන්න ඕන workflow එක:
+
+    aks-capstone-store-app
+      Verify Dev release end-to-end
+
+මෙය Dev release එක ඇත්තටම workingද කියලා prove කරනවා.
+
+## QA වලට යවන්න user run කරන්න ඕන workflow එක
+
+Dev verification pass නම් user run කරන්න ඕන workflow එක:
+
+    aks-capstone-gitops
+      Promote store-front image
 
 Input:
 
     target_environment: qa
-    image_tag: same image tag tested in Dev
+    image_tag: Dev වල verify කළ image tag එක
 
-This updates QA overlay.
+## Prod වලට යවන්න user run කරන්න ඕන workflow එක
 
-GitOps validation runs automatically.
-
-Argo CD syncs QA.
-
-## How to promote to Prod?
-
-After QA is validated, user runs:
+QA validation pass නම් user run කරන්න ඕන workflow එක:
 
     aks-capstone-gitops
-      -> Promote store-front image
+      Promote store-front image
 
 Input:
 
     target_environment: prod
-    image_tag: same image tag tested in Dev and QA
+    image_tag: QA වල verify කළ image tag එක
 
-This updates Prod overlay.
-
-GitOps validation runs automatically.
-
-Argo CD syncs Prod.
-
-## Full user journey
-
-A learner should follow this journey:
-
-    1. Run app build/deploy pipeline in app repo
-    2. Watch GitOps validation pipeline in GitOps repo
-    3. Check Argo CD Dev app
-    4. Run Dev release verification pipeline in app repo
-    5. Promote same image to QA from GitOps repo
-    6. Watch GitOps validation pipeline
-    7. Check Argo CD QA app
-    8. Promote same image to Prod from GitOps repo
-    9. Watch GitOps validation pipeline
-    10. Check Argo CD Prod app
-
-## Simple visual flow
-
-Text diagram:
-
-    Developer triggers app release
-          |
-          v
-    App repo pipeline
-    Build / scan / push image / update Dev GitOps
-          |
-          v
-    GitOps repo validation pipeline
-    YAML / Kustomize / kubeconform
-          |
-          v
-    Argo CD syncs Dev
-          |
-          v
-    Dev verification pipeline
-    ACR / GitOps / Argo CD / AKS / Gateway
-          |
-          v
-    Promote same image to QA
-          |
-          v
-    GitOps validation
-          |
-          v
-    Argo CD syncs QA
-          |
-          v
-    Promote same image to Prod
-          |
-          v
-    GitOps validation
-          |
-          v
-    Argo CD syncs Prod
-
-## Pipeline responsibility table
-
-Pipeline responsibilities:
-
-    App build pipeline:
-      Build, scan, push, update Dev GitOps
-
-    GitOps validation pipeline:
-      Validate manifests and Kustomize
-
-    Argo CD:
-      Sync desired state to AKS
-
-    Dev verification pipeline:
-      Prove Dev release end-to-end
-
-    Promotion pipeline:
-      Promote same image tag to QA or Prod
-
-## Manual vs automatic steps
+## Manual සහ automatic steps
 
 Manual steps:
 
-    Build store-front and deploy Dev via GitOps
-    Verify Dev release end-to-end
-    Promote store-front image to QA
-    Promote store-front image to Prod
+    App build and Dev GitOps update workflow
+    Dev release verification workflow
+    QA promotion workflow
+    Prod promotion workflow
 
 Automatic steps:
 
-    Validate GitOps manifests after GitOps push
+    GitOps validation workflow after GitOps push
     Argo CD sync after GitOps desired state change
 
-## Why Dev verification is manual
+## Manual promotion වැදගත් ඇයි?
 
-Dev verification workflow is manual because user decides which image tag to verify.
+QA සහ Prod promotion automatic කරන එක හැම project එකකටම හොඳ නෑ.
 
-Example:
+විශේෂයෙන් Prod promotion එක human decision එකක් වෙන්න ඕන.
 
-    stage13-v1
+Manual promotion use කරන එකෙන්:
 
-This makes the verification explicit.
-
-It also avoids unnecessary cluster checks for every small commit.
-
-## Why promotion is manual
-
-Promotion to QA and Prod should be controlled.
-
-Especially Prod promotion should not happen automatically from every Dev change.
-
-Manual promotion gives human control.
-
-Production principle:
-
-    Dev can be frequent.
-    QA should be intentional.
-    Prod should be approved and intentional.
+    userට control තියෙනවා
+    wrong image එක Prod යන risk අඩු වෙනවා
+    learning project එකේ flow එක clear වෙනවා
+    approval-style release thinking එක build වෙනවා
 
 ## Build once, promote same image
 
-The most important release rule:
+මෙම project එකේ important release principle එක:
 
     Build once.
-    Promote the same image.
+    Promote same image.
 
-Do not rebuild for QA.
+Dev වල build කළ image එකම QA වලට යවන්න.
 
-Do not rebuild for Prod.
+QA වල verify කළ image එකම Prod වලට යවන්න.
 
-Why?
+QA හෝ Prod වලට අලුතින් rebuild කළ image එකක් යවන්න එපා.
 
-    Same artifact tested in Dev
-    Same artifact validated in QA
-    Same artifact released to Prod
+මෙයින් ලැබෙන වාසි:
 
-This improves traceability and confidence.
+    traceability හොඳයි
+    Dev/QA/Prod අතර artifact එක same
+    rollback planning ලේසි
+    release confidence වැඩි
 
-## What happens if same image tag is already in QA or Prod?
+## GitHub Actions UI එකේ stages පේන්නේ නැත්තේ ඇයි?
 
-Promotion workflow may say:
+GitHub Actions වල Azure DevOps වගේ explicit stage view එකක් නෑ.
 
-    No promotion change to commit
-
-This is not a failure.
-
-It means the target environment already uses the requested image tag.
-
-The workflow can still pass.
-
-## GitHub Actions UI tips
-
-GitHub Actions UI shows:
+GitHub Actions structure එක:
 
     Workflow
       -> Job
           -> Steps
 
-It does not show Azure DevOps-style stages.
+ඒ නිසා අපි workflow steps numbered කරලා තියෙනවා.
 
-That is why we use numbered steps like:
+උදාහරණයක්:
 
-    [01]
-    [02]
-    [03]
+    [01] Checkout GitOps repo
+    [02] Validate promotion input
+    [03] Update target overlay image tag
 
-This helps users understand which phase is currently running.
+මෙය learnerට pipeline එකේ current phase එක හොයාගන්න උදව් වෙනවා.
 
-## Where to watch each pipeline
+## User workflows බලන්න ඕන තැන්
 
-For app build and Dev verification:
+App build සහ Dev verification බලන්න:
 
-    Open aks-capstone-store-app
-    Go to Actions
+    aks-capstone-store-app
+      Actions tab
 
-For GitOps validation and promotion:
+GitOps validation සහ QA/Prod promotion බලන්න:
 
-    Open aks-capstone-gitops
-    Go to Actions
+    aks-capstone-gitops
+      Actions tab
 
-For Argo CD health:
-
-    Use kubectl
-
-Example:
+Argo CD health බලන්න:
 
     kubectl get applications -n argocd
 
-## Current final pipeline list
+## Current final workflow list
 
-Final pipeline list after Stage 16:
+App repo workflows:
 
-    aks-capstone-store-app:
-      Build store-front and deploy Dev via GitOps
-      Verify Dev release end-to-end
+    Build store-front and deploy Dev via GitOps
+    Verify Dev release end-to-end
 
-    aks-capstone-gitops:
-      Validate GitOps manifests
-      Promote store-front image
+GitOps repo workflows:
+
+    Validate GitOps manifests
+    Promote store-front image
 
 Argo CD apps:
 
@@ -824,47 +662,51 @@ Argo CD apps:
     capstone-store-qa
     capstone-store-prod
 
-## Final verified project state
+## Final project state after Stage 16
 
-At the end of Stage 16:
+Stage 16 අවසානයේ verified state එක:
 
-    Dev:
-      Synced / Healthy
+    capstone-store-dev    Synced / Healthy
+    capstone-store-qa     Synced / Healthy
+    capstone-store-prod   Synced / Healthy
 
-    QA:
-      Synced / Healthy
+QA promotion:
 
-    Prod:
-      Synced / Healthy
+    success
 
-    QA promotion:
-      success
+Prod promotion:
 
-    Prod promotion:
-      success
+    success
 
-    QA/Prod services:
-      ClusterIP
+QA store-front service:
 
-    MongoDB:
-      stable after probe/resource tuning
+    ClusterIP
 
-## What this stage does not add
+Prod store-front service:
 
-Stage 17 does not add:
+    ClusterIP
 
-    new AKS resources
-    new application components
-    new image build logic
-    new promotion logic
+MongoDB:
 
-Stage 17 only documents and clarifies the existing pipeline flow.
+    probe/resource tuning පස්සේ stable
 
-## Why this documentation comes after Stage 16
+## Stage 17 වලින් add කරන්නේ මොනවාද?
 
-If this guide was written before Stage 16, it would become outdated.
+Stage 17 වලින් new infrastructure add කරන්නේ නෑ.
 
-Stage 16 added:
+Stage 17 වලින් add කරන්නේ:
+
+    pipeline flow explanation
+    repo responsibility explanation
+    manual vs automatic step explanation
+    Dev -> QA -> Prod release journey explanation
+    troubleshooting guidance
+
+## Stage 17 ලියන්නේ Stage 16 පස්සේ ඇයි?
+
+Stage 16ට කලින් QA/Prod promotion flow complete නැහැ.
+
+Stage 16 වලදී add වුණේ:
 
     QA overlay
     Prod overlay
@@ -872,169 +714,157 @@ Stage 16 added:
     Prod Argo CD app
     promotion workflow
     MongoDB stability improvement
+    QA/Prod ClusterIP service design
 
-Now the Dev -> QA -> Prod pipeline architecture is stable.
+ඒ නිසා Stage 17 guide එක Stage 16 පස්සේ ලියන එක තමයි correct.
 
-So Stage 17 is the correct time to write final pipeline visibility documentation.
+## Production lessons
 
-## Production learning points
+### 1. Pipelines කිහිපයක් තිබීම normal
 
-### 1. Multiple pipelines are normal
+Real projects වල app build, GitOps validation, release verification, promotion වගේ වැඩ එක pipeline එකකම නොවෙන්න පුළුවන්.
 
-Real projects often use separate pipelines for:
+Pipelines කිහිපයක් තිබුණත් responsibility clear නම් ඒක හොඳ pattern එකක්.
 
-    app build
-    manifest validation
-    promotion
-    verification
+### 2. Documentation DevOps quality එකේ කොටසක්
 
-One giant pipeline is not always the best pattern.
+Automation තිබුණත් userට flow එක තේරෙන්නේ නැත්නම් project එක complete නෑ.
 
-### 2. Clear documentation is part of DevOps quality
+Good DevOps project එකක documentationත් strong වෙන්න ඕන.
 
-If users cannot understand which pipeline to run, the platform is not learner-friendly.
+### 3. GitOps build සහ deploy වෙන් කරනවා
 
-Good DevOps includes:
+App pipeline එක image build කරනවා.
 
-    automation
-    visibility
-    documentation
-    troubleshooting guidance
+GitOps repo එක desired state define කරනවා.
 
-### 3. GitOps separates build from deploy
+Argo CD desired state cluster එකට sync කරනවා.
 
-App pipeline creates an artifact.
+මෙය GitOps model එකේ core idea එක.
 
-GitOps repo declares desired state.
+### 4. Promotion intentional වෙන්න ඕන
 
-Argo CD deploys desired state.
+QA සහ Prod promotion human decision එකක් විය යුතුයි.
 
-This separation is the core GitOps model.
+Manual workflow_dispatch මේ learning project එකට හොඳ approach එකක්.
 
-### 4. Promotion should be controlled
+### 5. Final verification අනිවාර්යයි
 
-QA and Prod promotions should be intentional.
+Pipeline pass වුණා කියලා app userට වැඩ කරනවා කියලා assume කරන්න බැහැ.
 
-Manual workflow_dispatch is acceptable for learning and controlled release flow.
+ඒ නිසා Dev verification workflow එක Gateway HTTP 200 දක්වා check කරනවා.
 
-### 5. Final verification matters
+### 6. Naming clear නම් learnerට ලේසියි
 
-A pipeline pass does not always mean users can access the app.
-
-That is why Dev release verification checks Gateway HTTP 200.
-
-### 6. Pipeline names and step names matter
-
-Clear names help learners and reviewers.
-
-Numbered steps make GitHub Actions easier to read.
+Workflow names සහ step names clear නම් GitHub Actions UI එකේ flow එක ලේසියෙන් තේරෙනවා.
 
 ## Troubleshooting
 
-### Issue 1 - User cannot find the workflow
+### Issue 1 - Workflow එක හොයාගන්න බැහැ
 
-Check correct repo.
+මුලින් correct repo එක open කරලා තියෙනවද බලන්න.
 
-App workflows are in:
+App workflows තියෙන්නේ:
 
     aks-capstone-store-app
 
-GitOps workflows are in:
+GitOps workflows තියෙන්නේ:
 
     aks-capstone-gitops
 
-Use:
+CLI check:
 
     gh workflow list
 
-### Issue 2 - GitOps validation does not run
+### Issue 2 - GitOps validation auto run වෙන්නේ නැහැ
 
-Check whether a commit was pushed to GitOps repo main branch.
+GitOps repo main branch එකට commit push වුණාද බලන්න.
 
-Use:
+Commands:
 
     git log --oneline -5
     gh run list --workflow="validate-gitops-manifests.yml" --limit 5
 
-### Issue 3 - Argo CD does not update
+### Issue 3 - Argo CD update වෙන්නේ නැහැ
 
-Check application status:
+Argo CD applications status බලන්න:
 
     kubectl get applications -n argocd
 
-Hard refresh if needed:
+Hard refresh කරන්න:
 
     kubectl annotate application <app-name> -n argocd \
       argocd.argoproj.io/refresh=hard \
       --overwrite
 
-### Issue 4 - Target environment image did not change
+### Issue 4 - Target environment image update වෙලා නැහැ
 
-Check overlay file:
+Overlay file එක බලන්න:
 
     apps/capstone-store/overlays/qa/kustomization.yaml
     apps/capstone-store/overlays/prod/kustomization.yaml
 
-Check actual deployment:
+Actual deployment image බලන්න:
 
     kubectl get deployment store-front -n <namespace> \
       -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 
-### Issue 5 - QA/Prod service has public IP
+### Issue 5 - QA/Prod service public IP එකක් ගන්නවා
 
-Expected:
+QA/Prod store-front service expected type එක:
 
     ClusterIP
 
-If it shows LoadBalancer, check overlay patch:
+If `LoadBalancer` පේනවා නම් overlay patch එක check කරන්න:
 
     patch-store-front-service.yaml
 
-Then check rendered manifest:
+Rendered manifest check කරන්න:
 
     kubectl kustomize apps/capstone-store/overlays/qa
     kubectl kustomize apps/capstone-store/overlays/prod
 
-### Issue 6 - App is Synced but Progressing
+### Issue 6 - Argo CD Synced නමුත් Progressing
 
-Check pods:
+Pods check කරන්න:
 
     kubectl get pods -n <namespace>
 
-Check failing pod logs:
+Pod logs බලන්න:
 
     kubectl logs <pod-name> -n <namespace> --tail=100
 
-Check events:
+Pod events බලන්න:
 
     kubectl describe pod <pod-name> -n <namespace>
 
 ## Learner summary
 
-Stage 17 makes the pipeline flow understandable.
+Stage 17 වලින් pipeline flow එක පැහැදිලි වුණා.
 
-The project now has a complete Dev -> QA -> Prod release story:
+දැන් project එකේ complete release story එක:
 
-    build image
-    scan image
-    update GitOps
-    validate manifests
-    deploy with Argo CD
-    verify Dev
-    promote same image to QA
-    promote same image to Prod
+    app image build කරනවා
+    security scans run කරනවා
+    image ACR එකට push කරනවා
+    GitOps desired state update කරනවා
+    GitOps manifests validate කරනවා
+    Argo CD Dev sync කරනවා
+    Dev release verify කරනවා
+    same image QA වලට promote කරනවා
+    same image Prod වලට promote කරනවා
 
-The most important idea:
+මතක තබාගන්න ඕන main idea එක:
 
-    App pipeline builds the artifact.
-    GitOps pipeline validates desired state.
-    Argo CD deploys desired state.
-    Verification pipeline proves the release.
-    Promotion pipeline moves the same image across environments.
+    App pipeline artifact එක හදනවා.
+    GitOps pipeline desired state validate කරනවා.
+    Argo CD desired state deploy කරනවා.
+    Verification pipeline release එක prove කරනවා.
+    Promotion pipeline same image එක environment අතර move කරනවා.
 
-Next stages can continue with:
+Next stages:
 
     AIOps PR remediation
     platform Terraform CI
-    final README/architecture cleanup
+    final README and architecture cleanup
     DNS and TLS later
