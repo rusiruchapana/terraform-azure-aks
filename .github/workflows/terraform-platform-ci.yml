@@ -33,17 +33,19 @@ jobs:
           echo "Checking Terraform formatting..."
           terraform fmt -check -recursive
 
-      - name: "[04] Find Terraform root directories"
+      - name: "[04] Define Terraform root directories"
         run: |
           set -euo pipefail
 
-          find . -type f -name "*.tf" \
-            -not -path "*/.terraform/*" \
-            -exec dirname {} \; \
-            | sort -u \
+          printf "%s\n" \
+            "bootstrap/state-storage" \
+            "environments/capstone-platform" \
+            "environments/dev" \
+            "environments/qa" \
+            "environments/prod" \
             > /tmp/terraform-dirs.txt
 
-          echo "Terraform directories found:"
+          echo "Terraform root directories selected for CI:"
           cat /tmp/terraform-dirs.txt
 
       - name: "[05] Terraform init and validate"
