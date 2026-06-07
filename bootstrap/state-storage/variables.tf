@@ -1,5 +1,6 @@
 variable "location" {
   description = "Azure region for Terraform State Resources"
+  type        = string
 }
 
 variable "resource_group_name" {
