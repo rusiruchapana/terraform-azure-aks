@@ -29,3 +29,5 @@ backend.tf
 # OS / editor
 .DS_Store
 .vscode/
+.local-ui-pids/
+.local-ui-logs/
