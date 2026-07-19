@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-demo
+  namespace: beginner-registry
+  labels:
+    app: registry-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry-demo
+  template:
+    metadata:
+      labels:
+        app: registry-demo
+    spec:
+      nodeSelector:
+        workload: user
+      containers:
+      - name: registry-demo
+        image: rusiruacrtest01.azurecr.io/samples/nginx01:latest
+        ports:
+        - containerPort: 80
