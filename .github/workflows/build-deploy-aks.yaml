@@ -39,20 +39,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Check ACR variables
-        run: |
-          echo "Registry: ${{ secrets.REGISTRY_LOGIN_SERVER }}"
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      # - name: Login to ACR
-      #   uses: docker/login-action@v3
-      #   with:
-      #     registry: ${{ secrets.REGISTRY_LOGIN_SERVER  }}
-      #     username: ${{ secrets.REGISTRY_USERNAME }}
-      #     password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_LOGIN_SERVER  }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
       # - name: Build and push
       #   uses: docker/build-push-action@v7
