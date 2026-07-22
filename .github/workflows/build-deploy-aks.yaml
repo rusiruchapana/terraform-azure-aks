@@ -1,0 +1,100 @@
+name: Build and deploy to AKS
+
+on:
+  push:
+    branches:
+      - main    
+    paths:
+      - ".github/workflows/build-deploy-aks.yaml"
+      - "labs/practitioner/01-github-actions-to-aks/**"
+
+
+env:
+  IMAGE_NAME: practitioner-github-actions
+
+
+
+jobs:
+  validate:
+    name: Validate k8s manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Validate required files exist
+        run: |
+          test -f labs/practitioner/01-github-actions-to-aks/app/Dockerfile
+          test -f labs/practitioner/01-github-actions-to-aks/k8s/namespace.yaml
+          test -f labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml
+          test -f labs/practitioner/01-github-actions-to-aks/k8s/service.yaml
+
+      - name: Check image placeholder exists
+        run: |
+          grep -q "IMAGE_PLACEHOLDER" labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml
+
+  build_push:
+    name: Build and push image
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Check ACR variables
+        run: |
+          echo "Registry: ${{ secrets.REGISTRY_LOGIN_SERVER }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # - name: Login to ACR
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ${{ secrets.REGISTRY_LOGIN_SERVER  }}
+      #     username: ${{ secrets.REGISTRY_USERNAME }}
+      #     password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      # - name: Build and push
+      #   uses: docker/build-push-action@v7
+      #   with:
+      #     context: labs/practitioner/01-github-actions-to-aks/app
+      #     push: true
+      #     tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+
+  # deploy:
+  #   name: Deploy to AKS
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v7
+
+  #    -  name: Azure login
+  #       uses: azure/login@v3
+  #       with:
+  #         creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID  }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+  #         enable-AzPSSession: true
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
