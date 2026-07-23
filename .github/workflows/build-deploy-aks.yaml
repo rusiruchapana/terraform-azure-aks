@@ -86,7 +86,7 @@ jobs:
 
           kubectl apply -f labs/practitioner/01-github-actions-to-aks/k8s/namespace.yaml
 
-          kubectl apply -f labs/practitioner/01-github-actions-to-aks/k8s\service.yaml
+          kubectl apply -f labs/practitioner/01-github-actions-to-aks/k8s/service.yaml
           
           sed "s|IMAGE_PLACEHOLDER|${IMAGE}|g" \
             labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml \
