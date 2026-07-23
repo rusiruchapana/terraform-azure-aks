@@ -8,11 +8,8 @@ on:
       - ".github/workflows/build-deploy-aks.yaml"
       - "labs/practitioner/01-github-actions-to-aks/**"
 
-
 env:
   IMAGE_NAME: practitioner-github-actions
-
-
 
 jobs:
   validate:
@@ -58,7 +55,6 @@ jobs:
           push: true
           tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-
   deploy:
     name: Deploy to AKS
     runs-on: ubuntu-latest
@@ -97,9 +93,7 @@ jobs:
           
           sed "s|IMAGE_PLACEHOLDER|${IMAGE}|g" \
             labs/practitioner/01-github-actions-to-aks/k8s/deployment.yaml \
-            | kubectl apply -f -
-
-          
+            | kubectl apply -f - 
 
 
 
